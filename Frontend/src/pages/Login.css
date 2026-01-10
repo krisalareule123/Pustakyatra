@@ -1,0 +1,257 @@
+/* Professional Login Page Layout */
+.loginWrap {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #faf7f0 0%, #f5f1e8 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+  box-sizing: border-box;
+}
+
+.loginContainer {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 32px;
+}
+
+/* Header Section */
+.loginHeader {
+  text-align: center;
+  max-width: 600px;
+}
+
+.loginTitle {
+  font-size: clamp(32px, 4vw, 48px);
+  font-weight: 700;
+  color: #1a2912;
+  margin: 0 0 16px;
+  letter-spacing: -0.01em;
+}
+
+.loginSub {
+  font-size: 18px;
+  color: rgba(26, 41, 18, 0.7);
+  margin: 0;
+  line-height: 1.6;
+  font-weight: 400;
+}
+
+/* Card Section */
+.loginCard {
+  width: 100%;
+  max-width: 480px;
+  background: linear-gradient(135deg, 
+    rgba(255, 255, 255, 0.95) 0%, 
+    rgba(255, 255, 255, 0.85) 100%);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 24px;
+  padding: 40px;
+  box-shadow: 
+    0 32px 64px rgba(0, 0, 0, 0.08),
+    0 8px 32px rgba(0, 0, 0, 0.04);
+  box-sizing: border-box;
+  position: relative;
+  overflow: hidden;
+}
+
+.loginCard::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(circle at 20% 20%, rgba(59, 87, 35, 0.05) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+.loginCard > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Role Toggle */
+.loginRole {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 32px;
+  padding: 6px;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 16px;
+  border: 1px solid rgba(59, 87, 35, 0.15);
+}
+
+.loginRole button {
+  flex: 1;
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: none;
+  background: transparent;
+  color: #3b5723;
+  font-weight: 600;
+  font-size: 15px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.loginRole button.active {
+  background: linear-gradient(135deg, #3b5723 0%, #4a6b2a 100%);
+  color: white;
+  box-shadow: 0 4px 16px rgba(59, 87, 35, 0.3);
+}
+
+/* Form Styles */
+.loginCard form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.loginCard label {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1a2912;
+  margin-bottom: 8px;
+  display: block;
+}
+
+.loginCard input[type="email"],
+.loginCard input[type="password"],
+.loginCard input[type="text"] {
+  width: 100%;
+  padding: 16px 18px;
+  border-radius: 12px;
+  border: 1px solid rgba(59, 87, 35, 0.2);
+  background: rgba(255, 255, 255, 0.8);
+  font-size: 16px;
+  color: #1a2912;
+  font-weight: 500;
+  box-sizing: border-box;
+  transition: all 0.3s ease;
+}
+
+.loginCard input::placeholder {
+  color: rgba(26, 41, 18, 0.5);
+}
+
+.loginCard input:focus {
+  outline: none;
+  border-color: #3b5723;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 0 0 4px rgba(59, 87, 35, 0.1);
+}
+
+/* Form Row */
+.loginRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.remember {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  color: rgba(26, 41, 18, 0.7);
+  font-weight: 500;
+}
+
+.remember input[type="checkbox"] {
+  width: auto;
+  margin: 0;
+}
+
+/* Login Button */
+.loginBtn {
+  padding: 16px 32px;
+  border-radius: 12px;
+  border: none;
+  background: linear-gradient(135deg, #3b5723 0%, #4a6b2a 100%);
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 8px 24px rgba(59, 87, 35, 0.3);
+}
+
+.loginBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(59, 87, 35, 0.4);
+}
+
+/* Links */
+.loginLinks {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-size: 15px;
+  text-align: center;
+  padding-top: 8px;
+}
+
+.loginLinks .muted {
+  color: rgba(26, 41, 18, 0.6);
+  font-weight: 500;
+}
+
+.loginLinks a {
+  color: #3b5723;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.loginLinks a:hover {
+  text-decoration: underline;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .loginWrap {
+    padding: 24px 16px;
+  }
+  
+  .loginContainer {
+    gap: 24px;
+  }
+  
+  .loginCard {
+    padding: 32px 24px;
+  }
+  
+  .loginRow {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+  }
+  
+  .loginBtn {
+    width: 100%;
+    justify-self: stretch;
+  }
+}
+
+@media (max-width: 480px) {
+  .loginCard {
+    padding: 24px 20px;
+  }
+  
+  .loginRole {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .loginRole button {
+    padding: 14px;
+  }
+}

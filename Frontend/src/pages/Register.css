@@ -1,0 +1,460 @@
+/* Professional Register Page Layout */
+.regPage {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #faf7f0 0%, #f5f1e8 100%);
+  padding: 40px 0;
+}
+
+.regContainer {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.regShell {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  align-items: stretch;
+  border-radius: 32px;
+  background: linear-gradient(135deg, 
+    rgba(255, 255, 255, 0.95) 0%, 
+    rgba(255, 255, 255, 0.85) 100%);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 
+    0 32px 64px rgba(0, 0, 0, 0.08),
+    0 8px 32px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+  position: relative;
+}
+
+.regShell::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(circle at 20% 20%, rgba(59, 87, 35, 0.05) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+/* Left Sidebar */
+.regSide {
+  padding: 48px 40px;
+  position: relative;
+  background: linear-gradient(135deg, 
+    rgba(59, 87, 35, 0.08) 0%, 
+    rgba(90, 130, 52, 0.12) 100%);
+  border-right: 1px solid rgba(255, 255, 255, 0.3);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  z-index: 1;
+}
+
+.regSidePill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border-radius: 50px;
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(59, 87, 35, 0.15);
+  font-size: 14px;
+  font-weight: 600;
+  color: #3b5723;
+  letter-spacing: 0.3px;
+  margin-bottom: 24px;
+  backdrop-filter: blur(10px);
+}
+
+.regSideTitle {
+  margin: 0 0 16px;
+  font-size: clamp(36px, 4vw, 48px);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: #1a2912;
+  font-weight: 700;
+}
+
+.regSideAccent {
+  background: linear-gradient(135deg, #3b5723 0%, #5a8234 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.regSideText {
+  margin: 0 0 32px;
+  color: rgba(26, 41, 18, 0.8);
+  font-size: 18px;
+  line-height: 1.6;
+  font-weight: 400;
+  max-width: 400px;
+}
+
+.regSideStats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.regStat {
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 16px;
+  padding: 16px 12px;
+  text-align: center;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+}
+
+.regStat:hover {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.regStatNum {
+  font-size: 20px;
+  font-weight: 700;
+  color: #3b5723;
+  letter-spacing: -0.01em;
+  margin-bottom: 4px;
+}
+
+.regStatLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(26, 41, 18, 0.7);
+}
+
+.regSideNote {
+  padding: 16px 20px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: rgba(26, 41, 18, 0.7);
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 1.5;
+  backdrop-filter: blur(10px);
+}
+
+/* Right Form Card */
+.regCard {
+  padding: 48px 40px;
+  background: rgba(255, 255, 255, 0.6);
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.regHeader {
+  margin-bottom: 32px;
+}
+
+.regHeaderTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.regTitle {
+  margin: 0;
+  color: #1a2912;
+  font-size: clamp(24px, 3vw, 32px);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  flex: 1;
+}
+
+.regSubtitle {
+  margin: 0;
+  color: rgba(26, 41, 18, 0.7);
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.6;
+}
+
+/* Role Toggle */
+.roleToggle {
+  display: inline-flex;
+  padding: 6px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(59, 87, 35, 0.15);
+  gap: 4px;
+  backdrop-filter: blur(10px);
+}
+
+.roleBtn {
+  border: none;
+  background: transparent;
+  padding: 10px 16px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  color: rgba(26, 41, 18, 0.7);
+  transition: all 0.3s ease;
+}
+
+.roleBtn:hover {
+  background: rgba(59, 87, 35, 0.1);
+}
+
+.roleBtn.active {
+  background: linear-gradient(135deg, #3b5723, #4a6b2a);
+  color: white;
+  box-shadow: 0 4px 16px rgba(59, 87, 35, 0.3);
+}
+
+/* Form Styles */
+.regForm {
+  margin-top: 24px;
+}
+
+.regGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fieldFull {
+  grid-column: 1 / -1;
+}
+
+.field label {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1a2912;
+}
+
+.field label span {
+  color: #e74c3c;
+  margin-left: 2px;
+}
+
+.field label small {
+  font-weight: 500;
+  color: rgba(26, 41, 18, 0.6);
+}
+
+.field input,
+.field textarea {
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid rgba(59, 87, 35, 0.2);
+  background: rgba(255, 255, 255, 0.8);
+  padding: 16px 18px;
+  color: #1a2912;
+  font-weight: 500;
+  font-size: 16px;
+  outline: none;
+  transition: all 0.3s ease;
+  box-sizing: border-box;
+}
+
+.field textarea {
+  resize: vertical;
+  min-height: 120px;
+  font-family: inherit;
+  line-height: 1.5;
+}
+
+.field input::placeholder,
+.field textarea::placeholder {
+  color: rgba(26, 41, 18, 0.5);
+  font-weight: 400;
+}
+
+.field input:focus,
+.field textarea:focus {
+  border-color: #3b5723;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 0 0 4px rgba(59, 87, 35, 0.1);
+}
+
+.helperRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+}
+
+.helperText {
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(26, 41, 18, 0.6);
+}
+
+.helperCount {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(26, 41, 18, 0.7);
+}
+
+/* Messages */
+.msg {
+  margin-bottom: 20px;
+  padding: 16px 20px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.msg.error {
+  background: rgba(231, 76, 60, 0.1);
+  border: 1px solid rgba(231, 76, 60, 0.25);
+  color: #e74c3c;
+}
+
+.msg.ok {
+  background: rgba(46, 204, 113, 0.1);
+  border: 1px solid rgba(46, 204, 113, 0.25);
+  color: #2ecc71;
+}
+
+/* Submit Button */
+.regSubmit {
+  width: 100%;
+  border: none;
+  border-radius: 16px;
+  padding: 18px 24px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 16px;
+  color: white;
+  background: linear-gradient(135deg, #3b5723, #4a6b2a);
+  box-shadow: 0 8px 24px rgba(59, 87, 35, 0.3);
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.regSubmit:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(59, 87, 35, 0.4);
+}
+
+.regSubmit:active {
+  transform: translateY(0);
+}
+
+.arrow {
+  font-size: 16px;
+  transition: transform 0.3s ease;
+}
+
+.regSubmit:hover .arrow {
+  transform: translateX(2px);
+}
+
+/* Footer */
+.regFooterRow {
+  text-align: center;
+  color: rgba(26, 41, 18, 0.7);
+  font-weight: 500;
+  font-size: 15px;
+}
+
+.regFooterRow a {
+  color: #3b5723;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.regFooterRow a:hover {
+  text-decoration: underline;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .regContainer {
+    padding: 0 20px;
+  }
+  
+  .regShell {
+    grid-template-columns: 1fr;
+  }
+  
+  .regSide {
+    border-right: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+    padding: 40px 32px;
+  }
+  
+  .regCard {
+    padding: 40px 32px;
+  }
+}
+
+@media (max-width: 768px) {
+  .regPage {
+    padding: 20px 0;
+  }
+  
+  .regContainer {
+    padding: 0 16px;
+  }
+  
+  .regSide,
+  .regCard {
+    padding: 32px 24px;
+  }
+  
+  .regSideTitle {
+    font-size: 32px;
+  }
+  
+  .regGrid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .regHeaderTop {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+  }
+  
+  .roleToggle {
+    align-self: flex-start;
+  }
+}
+
+@media (max-width: 480px) {
+  .regSide,
+  .regCard {
+    padding: 24px 20px;
+  }
+  
+  .regSideStats {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  
+  .field input,
+  .field textarea {
+    padding: 14px 16px;
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+}

@@ -1,0 +1,57 @@
+.bookcard{
+  border-radius: 18px;
+  border: 1px solid rgba(0,0,0,.10);
+  background: rgba(255,255,255,.75);
+  box-shadow: 0 12px 28px rgba(0,0,0,.07);
+  padding: 12px;
+}
+
+.bookcover{
+  height: 190px;
+  border-radius: 16px;
+  border: 1px solid rgba(0,0,0,.10);
+  background: linear-gradient(135deg, rgba(59,87,35,.18), rgba(0,0,0,.03));
+  position: relative;
+  overflow: hidden;
+}
+
+.bookbadge{
+  position:absolute;
+  top: 12px;
+  left: 12px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-weight: 950;
+  font-size: 13px;
+  color: rgba(0,0,0,.65);
+  background: rgba(255,255,255,.85);
+  border: 1px solid rgba(0,0,0,.10);
+}
+
+.booklines{
+  position:absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  display:flex;
+  flex-direction:column;
+  gap: 10px;
+}
+
+.booklines span{
+  height: 12px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.75);
+  border: 1px solid rgba(0,0,0,.08);
+}
+
+.booklines span:nth-child(2){ width: 70%; }
+.booklines span:nth-child(3){ width: 55%; }
+
+.booktitle{
+  margin: 10px 4px 4px;
+  font-weight: 950;
+  color: rgba(0,0,0,.72);
+  font-size: 15px;
+  line-height: 1.2;
+}

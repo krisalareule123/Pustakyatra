@@ -1,0 +1,19 @@
+# Node
+node_modules
+**/node_modules
+
+# Environment secrets
+.env
+**/.env
+
+# Vite build
+dist
+**/dist
+
+# OS
+.DS_Store
+
+# Logs
+*.log
+
+
