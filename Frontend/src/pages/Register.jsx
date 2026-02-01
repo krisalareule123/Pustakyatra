@@ -9,8 +9,6 @@ export default function Register() {
     email: "",
     password: "",
     confirmPassword: "",
-    penName: "",
-    bio: "",
   });
 
   const [error, setError] = useState("");
@@ -51,10 +49,6 @@ export default function Register() {
       setError("Password and Confirm Password do not match.");
       return;
     }
-    if (isAuthor && form.bio.length > 300) {
-      setError("Bio should be under 300 characters.");
-      return;
-    }
 
     setOk(`Registered as ${isAuthor ? "Author" : "Reader"} successfully (demo).`);
   }
@@ -72,6 +66,7 @@ export default function Register() {
 
             <p className="regSideText">
               A warm, simple space to read Nepali literature — and for authors to publish with ease.
+              {isAuthor && " Complete your author profile, add your bio, and start publishing after registration."}
             </p>
 
             <div className="regSideStats">
@@ -89,7 +84,12 @@ export default function Register() {
               </div>
             </div>
 
-            <div className="regSideNote">Tip: You can switch account type anytime before submitting.</div>
+            <div className="regSideNote">
+              {isAuthor 
+                ? "Complete your author profile after registration in your dashboard." 
+                : "You can switch account type anytime before submitting."
+              }
+            </div>
           </aside>
 
           <section className="regCard">
@@ -166,33 +166,6 @@ export default function Register() {
                     placeholder="Re-enter password"
                   />
                 </div>
-
-                {isAuthor && (
-                  <>
-                    <div className="field">
-                      <label>Pen Name <small>(optional)</small></label>
-                      <input
-                        value={form.penName}
-                        onChange={(e) => updateField("penName", e.target.value)}
-                        placeholder="e.g., your pen name"
-                      />
-                    </div>
-
-                    <div className="field fieldFull">
-                      <label>Short Bio <small>(optional)</small></label>
-                      <textarea
-                        value={form.bio}
-                        onChange={(e) => updateField("bio", e.target.value)}
-                        rows={4}
-                        placeholder="Tell readers about you (max 300 chars)"
-                      />
-                      <div className="helperRow">
-                        <span className="helperText">Keep it short and warm.</span>
-                        <span className="helperCount">{form.bio.length}/300</span>
-                      </div>
-                    </div>
-                  </>
-                )}
               </div>
 
               {error && <div className="msg error">{error}</div>}

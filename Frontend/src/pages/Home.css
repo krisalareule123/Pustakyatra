@@ -335,6 +335,8 @@
   transition: all 0.3s ease;
   cursor: pointer;
   backdrop-filter: blur(10px);
+  text-decoration: none;
+  color: inherit;
 }
 
 .coverCard:hover {
@@ -342,6 +344,8 @@
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.12),
     0 4px 16px rgba(0, 0, 0, 0.08);
   border-color: rgba(59, 87, 35, 0.2);
+  text-decoration: none;
+  color: inherit;
 }
 
 .coverTop {

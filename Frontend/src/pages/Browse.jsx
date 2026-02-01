@@ -1,68 +1,6 @@
 import { Link } from "react-router-dom";
+import { mockBooks } from "../data/mockBooks";
 import "./Pages.css";
-
-const books = [
-  { 
-    id: 1, 
-    title: "Basain", 
-    author: "Lil Bahadur Chettri", 
-    category: "Classic", 
-    year: "1957", 
-    rating: 4.8,
-    pages: 280,
-    language: "Nepali"
-  },
-  { 
-    id: 2, 
-    title: "Muna Madan", 
-    author: "Laxmi Prasad Devkota", 
-    category: "Poetry", 
-    year: "1936", 
-    rating: 4.9,
-    pages: 156,
-    language: "Nepali"
-  },
-  { 
-    id: 3, 
-    title: "Palpasa Café", 
-    author: "Narayan Wagle", 
-    category: "Novel", 
-    year: "2005", 
-    rating: 4.6,
-    pages: 312,
-    language: "Nepali"
-  },
-  { 
-    id: 4, 
-    title: "Sirishko Phool", 
-    author: "Parijat", 
-    category: "Classic", 
-    year: "1965", 
-    rating: 4.7,
-    pages: 198,
-    language: "Nepali"
-  },
-  { 
-    id: 5, 
-    title: "Karnali Blues", 
-    author: "Buddhisagar", 
-    category: "Contemporary", 
-    year: "2010", 
-    rating: 4.5,
-    pages: 245,
-    language: "Nepali"
-  },
-  { 
-    id: 6, 
-    title: "Seto Dharati", 
-    author: "Amar Neupane", 
-    category: "Novel", 
-    year: "2008", 
-    rating: 4.4,
-    pages: 289,
-    language: "Nepali"
-  }
-];
 
 const categories = ["All Books", "Classics", "Novels", "Poetry", "Contemporary"];
 const sortOptions = ["Popular", "Newest", "Rating", "A-Z"];
@@ -163,14 +101,14 @@ export default function Browse() {
         </div>
 
         <div className="books-grid">
-          {books.map((book) => (
-            <article key={book.id} className="book-card">
+          {mockBooks.map((book) => (
+            <Link key={book.id} to={`/book/${book.id}`} className="book-card">
               <div className="book-cover">
                 <div className="cover-placeholder">
                   <div className="cover-pattern"></div>
                   <span className="cover-initials">{book.title.slice(0, 2)}</span>
                 </div>
-                <div className="book-badge">{book.category}</div>
+                <div className="book-badge">{book.categories[0]}</div>
               </div>
               
               <div className="book-info">
@@ -189,22 +127,34 @@ export default function Browse() {
                       <path d="M4 19.5A2.5 2.5 0 016.5 17H20" stroke="currentColor" strokeWidth="2"/>
                       <path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z" stroke="currentColor" strokeWidth="2"/>
                     </svg>
-                    <span>{book.pages}p</span>
+                    <span>Digital</span>
                   </div>
                   <div className="meta-item">
-                    <span>{book.year}</span>
+                    <span>2024</span>
                   </div>
                 </div>
 
                 <div className="book-actions">
-                  <button className="btn-secondary">
+                  <button 
+                    className="btn-secondary"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      alert('Preview feature coming soon!');
+                    }}
+                  >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                       <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" strokeWidth="2"/>
                       <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2"/>
                     </svg>
                     Preview
                   </button>
-                  <button className="btn-primary">
+                  <button 
+                    className="btn-primary"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      alert('Added to wishlist! (Demo)');
+                    }}
+                  >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                       <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0016.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 002 8.5c0 2.29 1.51 4.04 3 5.5l7 7z" stroke="currentColor" strokeWidth="2"/>
                     </svg>
@@ -212,7 +162,7 @@ export default function Browse() {
                   </button>
                 </div>
               </div>
-            </article>
+            </Link>
           ))}
         </div>
 

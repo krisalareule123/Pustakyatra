@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { mockBooks } from "../data/mockBooks";
 import "./Home.css";
 
@@ -10,15 +11,15 @@ const categories = [
   { name: "New Arrivals", icon: "✨" },
 ];
 
-function CoverCard({ title, subtitle, badge }) {
-  const initials = title
+function CoverCard({ book, badge }) {
+  const initials = book.title
     .split(" ")
     .slice(0, 2)
     .map((w) => w[0]?.toUpperCase())
     .join("");
 
   return (
-    <div className="coverCard" title={title}>
+    <Link to={`/book/${book.id}`} className="coverCard" title={book.title}>
       <div className="coverTop">
         <div className="coverBadge">{badge || initials}</div>
         <div className="coverPattern">
@@ -30,10 +31,10 @@ function CoverCard({ title, subtitle, badge }) {
       </div>
 
       <div className="coverText">
-        <div className="coverTitle">{title}</div>
-        {subtitle && <div className="coverSub">{subtitle}</div>}
+        <div className="coverTitle">{book.title}</div>
+        <div className="coverSub">{book.author}</div>
       </div>
-    </div>
+    </Link>
   );
 }
 
@@ -159,9 +160,9 @@ export default function Home() {
           </div>
 
           <div className="booksRow">
-            {recent.map((b) => (
-              <div key={b.id} className="bookItem">
-                <CoverCard title={b.title} subtitle={b.author} badge="NEW" />
+            {recent.map((book) => (
+              <div key={book.id} className="bookItem">
+                <CoverCard book={book} badge="NEW" />
               </div>
             ))}
           </div>
@@ -183,9 +184,9 @@ export default function Home() {
           </div>
 
           <div className="booksRow">
-            {best.map((b) => (
-              <div key={b.id} className="bookItem">
-                <CoverCard title={b.title} subtitle={b.author} badge="★" />
+            {best.map((book) => (
+              <div key={book.id} className="bookItem">
+                <CoverCard book={book} badge="★" />
               </div>
             ))}
           </div>

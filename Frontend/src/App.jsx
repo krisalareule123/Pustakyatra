@@ -12,6 +12,8 @@ import Categories from "./pages/Categories";
 import Authors from "./pages/Authors";
 import About from "./pages/About";
 
+import BookDetails from "./pages/BookDetails.jsx";
+
 import UserDashboard from "./pages/UserDashboard.jsx";
 
 export default function App() {
@@ -30,6 +32,8 @@ export default function App() {
 <Route path="/about" element={<About />} />
 
 <Route path="/dashboard" element={<UserDashboard />} />
+
+<Route path="/book/:id" element={<BookDetails />} />
 
       </Routes>
 
