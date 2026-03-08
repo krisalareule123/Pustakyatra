@@ -1,0 +1,365 @@
+
+.navbar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: linear-gradient(135deg, #faf7f0 0%, #f8f4ed 100%);
+  border-bottom: 1px solid rgba(59, 87, 35, 0.1);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 2px 20px rgba(0, 0, 0, 0.04);
+}
+
+.navbar-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* ================================
+   TOP BAR
+================================ */
+
+.navbar-main {
+  padding: 16px 0;
+}
+
+.navbar-main .navbar-container {
+  gap: 32px;
+}
+
+/* Brand */
+.brand-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #3b5723;
+}
+
+.brand-name {
+  font-size: 22px;
+  font-weight: 700;
+  color: #1a2912;
+  text-decoration: none;
+}
+
+/* ================================
+   SEARCH
+================================ */
+
+.navbar-search {
+  flex: 1;
+  max-width: 600px;
+}
+
+.search-wrapper {
+  display: flex;
+  align-items: center;
+  background: #fff;
+  border: 1px solid rgba(59, 87, 35, 0.2);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.search-icon {
+  padding: 0 16px;
+  color: #1a2912;
+}
+
+.search-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  padding: 14px 0;
+  font-size: 15px;
+}
+
+.search-btn {
+  background: #3b5723;
+  color: #fff;
+  border: none;
+  padding: 14px 20px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+/* ================================
+   ACTIONS (ICONS FIXED)
+================================ */
+
+.navbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* Cart Button */
+.cart-btn {
+  width: 44px;
+  height: 44px;
+  background: #ffffff;
+  color: #1a2912;
+  border: 2px solid rgba(59, 87, 35, 0.6);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  cursor: pointer;
+}
+
+/* Cart Icon */
+.cart-btn svg {
+  width: 26px;
+  height: 26px;
+  display: block;
+}
+
+.cart-btn svg path {
+  stroke: #1a2912 !important;   /* force visible */
+  stroke-width: 2.6;
+}
+
+/* Cart Badge */
+.cart-count {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: #d9534f;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 3px solid #faf7f0;
+}
+
+/* Login Button */
+.login-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #3b5723;
+  color: #fff;
+  padding: 12px 22px;
+  border-radius: 14px;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.login-btn svg {
+  width: 20px;
+  height: 20px;
+  stroke: #ffffff;
+  stroke-width: 2.4;
+}
+
+/* ================================
+   SECOND ROW MENU
+================================ */
+
+.navbar-secondary {
+  padding: 10px 0;
+  border-top: 1px solid rgba(59, 87, 35, 0.1);
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.nav-menu {
+  display: flex;
+  gap: 32px;
+}
+
+.nav-link {
+  text-decoration: none;
+  font-weight: 600;
+  color: #1a2912;
+}
+
+.nav-contact {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #1a2912;
+  font-weight: 500;
+}
+
+.nav-contact svg {
+  width: 16px;
+  height: 16px;
+  stroke: #1a2912;
+  stroke-width: 2.4;
+}
+
+/* ================================
+   RESPONSIVE FIXES
+================================ */
+
+@media (max-width: 768px) {
+  .navbar-main .navbar-container {
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .navbar-search {
+    width: 100%;
+  }
+
+  .login-btn span {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .nav-contact {
+    display: none;
+  }
+}
+
+/* Profile Dropdown Styles */
+.profile-dropdown {
+  position: relative;
+}
+
+.profile-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: #3b5723;
+  font-weight: 500;
+}
+
+.profile-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+.profile-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.profile-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-name {
+  font-size: 14px;
+  font-weight: 600;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dropdown-arrow {
+  transition: transform 0.3s ease;
+}
+
+.dropdown-arrow.open {
+  transform: rotate(180deg);
+}
+
+.profile-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 200px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 16px;
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.1);
+  padding: 8px;
+  z-index: 1000;
+  animation: dropdownFadeIn 0.2s ease;
+}
+
+@keyframes dropdownFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.profile-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  text-decoration: none;
+  color: #1a2912;
+  font-weight: 500;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  border: none;
+  background: none;
+  width: 100%;
+  cursor: pointer;
+  text-align: left;
+}
+
+.profile-menu-item:hover {
+  background: rgba(59, 87, 35, 0.1);
+  color: #3b5723;
+}
+
+.profile-menu-item.logout {
+  color: #e74c3c;
+}
+
+.profile-menu-item.logout:hover {
+  background: rgba(231, 76, 60, 0.1);
+  color: #c0392b;
+}
+
+.profile-menu-divider {
+  height: 1px;
+  background: rgba(59, 87, 35, 0.15);
+  margin: 8px 0;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .profile-name {
+    display: none;
+  }
+  
+  .profile-btn {
+    padding: 8px;
+  }
+  
+  .profile-menu {
+    right: -8px;
+    min-width: 180px;
+  }
+}

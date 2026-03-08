@@ -1,8 +1,10 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { readerAPI, authorAPI } from "../services/api";
 import "./Register.css";
 
 export default function Register() {
+  const navigate = useNavigate();
   const [role, setRole] = useState("reader");
   const [form, setForm] = useState({
     fullName: "",
@@ -13,6 +15,7 @@ export default function Register() {
 
   const [error, setError] = useState("");
   const [ok, setOk] = useState("");
+  const [loading, setLoading] = useState(false);
   const isAuthor = role === "author";
 
   const roleTitle = useMemo(
@@ -32,11 +35,12 @@ export default function Register() {
     setForm((p) => ({ ...p, [key]: value }));
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
     setError("");
     setOk("");
 
+    // Validation
     if (!form.fullName.trim() || !form.email.trim() || !form.password || !form.confirmPassword) {
       setError("Please fill in all required fields.");
       return;
@@ -50,7 +54,48 @@ export default function Register() {
       return;
     }
 
-    setOk(`Registered as ${isAuthor ? "Author" : "Reader"} successfully (demo).`);
+    setLoading(true);
+
+    try {
+      // Prepare data for API
+      const userData = {
+        fullName: form.fullName.trim(),
+        email: form.email.trim(),
+        password: form.password,
+      };
+
+      // Call appropriate API based on role
+      const response = isAuthor 
+        ? await authorAPI.register(userData)
+        : await readerAPI.register(userData);
+
+      // Store auth token and user data
+      localStorage.setItem('authToken', response.token);
+      localStorage.setItem('userData', JSON.stringify({
+        ...response.user,
+        role: role
+      }));
+
+      // Trigger custom event to update navbar
+      window.dispatchEvent(new Event('userLoggedIn'));
+
+      // Show success message
+      setOk(response.message || "Account created successfully! Redirecting...");
+
+      // Redirect after 1.5 seconds
+      setTimeout(() => {
+        if (isAuthor) {
+          navigate("/author/dashboard");
+        } else {
+          navigate("/dashboard");
+        }
+      }, 1500);
+
+    } catch (err) {
+      setError(err.message || "Registration failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -171,8 +216,8 @@ export default function Register() {
               {error && <div className="msg error">{error}</div>}
               {ok && <div className="msg ok">{ok}</div>}
 
-              <button className="regSubmit" type="submit">
-                Create Account <span className="arrow">→</span>
+              <button className="regSubmit" type="submit" disabled={loading}>
+                {loading ? "Creating Account..." : "Create Account"} <span className="arrow">→</span>
               </button>
 
               <div className="regFooterRow">

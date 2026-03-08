@@ -1,21 +1,41 @@
-import express from "express";
-import cors from "cors";
-import dotenv from "dotenv";
-
-import readerRoutes from "./routes/reader.routes.js";
+const express = require("express");
+const cors = require("cors");
+const dotenv = require("dotenv");
+const readerRoutes = require("./routes/reader.routes");
 
 dotenv.config();
 
 const app = express();
+const PORT = process.env.PORT || 5001;
 
 app.use(cors());
 app.use(express.json());
-
-app.get("/", (req, res) => {
-  res.send("Pustakyatra Backend Running ✅");
-});
+app.use(express.urlencoded({ extended: true }));
 
 app.use("/api/readers", readerRoutes);
 
-const PORT = process.env.PORT || 5001;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.get("/", (req, res) => {
+  res.json({
+    message: "Pustakyatra API is running ✅",
+    version: "1.0.0"
+  });
+});
+
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    message: "Route not found"
+  });
+});
+
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({
+    success: false,
+    message: "Something went wrong!"
+  });
+});
+
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+});

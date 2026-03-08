@@ -1,34 +1,64 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { readerAPI, authorAPI } from "../services/api";
 import "./Login.css";
 
 export default function Login() {
   const [role, setRole] = useState("reader");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const navigate = useNavigate();   // ✅ added
+  const navigate = useNavigate();
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
+    setError("");
 
-    // Demo user data - in real app this would come from backend
-    const userData = {
-      fullName: email.includes('krisala') ? 'Krisala Reule' : 'Demo User',
-      email: email,
-      role: role,
-      id: '1'
-    };
+    // Validation
+    if (!email.trim() || !password) {
+      setError("Please enter both email and password.");
+      return;
+    }
 
-    // Store auth token and user data in localStorage
-    localStorage.setItem('authToken', 'demo-jwt-token-' + Date.now());
-    localStorage.setItem('userData', JSON.stringify(userData));
+    setLoading(true);
 
-    // Trigger custom event to update navbar
-    window.dispatchEvent(new Event('userLoggedIn'));
+    try {
+      // Prepare credentials
+      const credentials = {
+        email: email.trim(),
+        password: password,
+      };
 
-    // Navigate to dashboard
-    navigate("/dashboard");
+      // Call appropriate API based on role
+      const response = role === "author"
+        ? await authorAPI.login(credentials)
+        : await readerAPI.login(credentials);
+
+      // Store auth token and user data
+      localStorage.setItem('authToken', response.token);
+      localStorage.setItem('userData', JSON.stringify({
+        ...response.user,
+        role: role
+      }));
+
+      // Trigger custom event to update navbar
+      window.dispatchEvent(new Event('userLoggedIn'));
+
+      // Navigate based on user role
+      if (role === "author") {
+        navigate("/author/dashboard");
+      } else {
+        navigate("/dashboard");
+      }
+
+    } catch (err) {
+      // Display the specific error message from backend
+      setError(err.message || "Login failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -68,6 +98,7 @@ export default function Login() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
                 required
+                disabled={loading}
               />
             </div>
 
@@ -79,8 +110,23 @@ export default function Login() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Enter your password"
                 required
+                disabled={loading}
               />
             </div>
+
+            {error && (
+              <div style={{
+                padding: "12px",
+                background: "#fee",
+                border: "1px solid #fcc",
+                borderRadius: "8px",
+                color: "#c33",
+                fontSize: "14px",
+                marginBottom: "16px"
+              }}>
+                {error}
+              </div>
+            )}
 
             <div className="loginRow">
               <label className="remember">
@@ -88,8 +134,8 @@ export default function Login() {
                 Remember me
               </label>
 
-              <button className="loginBtn" type="submit">
-                Sign In
+              <button className="loginBtn" type="submit" disabled={loading}>
+                {loading ? "Signing In..." : "Sign In"}
               </button>
             </div>
 

@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Outlet } from "react-router-dom";
 
 import Navbar from "./components/Navbar.jsx";
 import Footer from "./components/Footer.jsx";
@@ -16,28 +16,55 @@ import BookDetails from "./pages/BookDetails.jsx";
 
 import UserDashboard from "./pages/UserDashboard.jsx";
 
+// Author Panel Components
+import AuthorLayout from "./components/author/AuthorLayout.jsx";
+import AuthorDashboard from "./pages/author/AuthorDashboard.jsx";
+import MyBooks from "./pages/author/MyBooks.jsx";
+import AddBook from "./pages/author/AddBook.jsx";
+import Sales from "./pages/author/Sales.jsx";
+import AuthorProfile from "./pages/author/AuthorProfile.jsx";
+
+// Author Layout Wrapper Component
+function AuthorLayoutWrapper() {
+  return (
+    <AuthorLayout>
+      <Outlet />
+    </AuthorLayout>
+  );
+}
+
 export default function App() {
   return (
     <BrowserRouter>
-      <Navbar />
-
       <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/login" element={<Login />} />
+        {/* Author Panel Routes - NO Navbar/Footer */}
+        <Route path="/author/*" element={<AuthorLayoutWrapper />}>
+          <Route path="dashboard" element={<AuthorDashboard />} />
+          <Route path="books" element={<MyBooks />} />
+          <Route path="add-book" element={<AddBook />} />
+          <Route path="sales" element={<Sales />} />
+          <Route path="profile" element={<AuthorProfile />} />
+        </Route>
 
-        <Route path="/browse" element={<Browse />} />
-<Route path="/categories" element={<Categories />} />
-<Route path="/authors" element={<Authors />} />
-<Route path="/about" element={<About />} />
-
-<Route path="/dashboard" element={<UserDashboard />} />
-
-<Route path="/book/:id" element={<BookDetails />} />
-
+        {/* Reader Routes with Navbar & Footer */}
+        <Route path="*" element={
+          <>
+            <Navbar />
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/browse" element={<Browse />} />
+              <Route path="/categories" element={<Categories />} />
+              <Route path="/authors" element={<Authors />} />
+              <Route path="/about" element={<About />} />
+              <Route path="/book/:id" element={<BookDetails />} />
+              <Route path="/dashboard" element={<UserDashboard />} />
+            </Routes>
+            <Footer />
+          </>
+        } />
       </Routes>
-
-      <Footer />
     </BrowserRouter>
   );
 }
