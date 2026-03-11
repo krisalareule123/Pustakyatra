@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { readerAPI, authorAPI } from "../services/api";
 import "./Login.css";
@@ -11,6 +11,21 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
+
+  // Redirect if already logged in
+  useEffect(() => {
+    const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+    const userData = localStorage.getItem('userData');
+    
+    if (token && userData) {
+      const user = JSON.parse(userData);
+      if (user.role === 'author') {
+        navigate('/author/dashboard');
+      } else {
+        navigate('/dashboard');
+      }
+    }
+  }, [navigate]);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -36,7 +51,8 @@ export default function Login() {
         ? await authorAPI.login(credentials)
         : await readerAPI.login(credentials);
 
-      // Store auth token and user data
+      // Store auth token and user data (use both 'token' and 'authToken' for compatibility)
+      localStorage.setItem('token', response.token);
       localStorage.setItem('authToken', response.token);
       localStorage.setItem('userData', JSON.stringify({
         ...response.user,
@@ -140,7 +156,9 @@ export default function Login() {
             </div>
 
             <div className="loginLinks">
-              <span className="muted">Forgot your password? Contact support</span>
+              <Link to="/forgot-password" className="forgot-link">
+                Forgot your password?
+              </Link>
               <div>
                 Don&apos;t have an account?{" "}
                 <Link to="/register">Create Account</Link>

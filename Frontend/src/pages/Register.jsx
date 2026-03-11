@@ -69,7 +69,8 @@ export default function Register() {
         ? await authorAPI.register(userData)
         : await readerAPI.register(userData);
 
-      // Store auth token and user data
+      // Store auth token and user data (use both 'token' and 'authToken' for compatibility)
+      localStorage.setItem('token', response.token);
       localStorage.setItem('authToken', response.token);
       localStorage.setItem('userData', JSON.stringify({
         ...response.user,

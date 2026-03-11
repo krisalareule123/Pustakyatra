@@ -1,11 +1,13 @@
 import { BrowserRouter, Routes, Route, Outlet } from "react-router-dom";
 
-import Navbar from "./components/Navbar.jsx";
-import Footer from "./components/Footer.jsx";
+import Navbar from "./components/common/Navbar.jsx";
+import Footer from "./components/common/Footer.jsx";
+import CartPanel from "./components/common/CartPanel.jsx";
 
 import Home from "./pages/Home.jsx";
 import Register from "./pages/Register.jsx";
 import Login from "./pages/Login.jsx";
+import ForgotPassword from "./pages/ForgotPassword.jsx";
 
 import Browse from "./pages/Browse";
 import Categories from "./pages/Categories";
@@ -36,6 +38,7 @@ function AuthorLayoutWrapper() {
 export default function App() {
   return (
     <BrowserRouter>
+      <CartPanel />
       <Routes>
         {/* Author Panel Routes - NO Navbar/Footer */}
         <Route path="/author/*" element={<AuthorLayoutWrapper />}>
@@ -54,6 +57,7 @@ export default function App() {
               <Route path="/" element={<Home />} />
               <Route path="/register" element={<Register />} />
               <Route path="/login" element={<Login />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/browse" element={<Browse />} />
               <Route path="/categories" element={<Categories />} />
               <Route path="/authors" element={<Authors />} />

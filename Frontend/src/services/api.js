@@ -51,6 +51,60 @@ export const readerAPI = {
       },
     });
   },
+
+  // Update reader profile (protected)
+  updateProfile: async (token, profileData) => {
+    return apiCall("/readers/profile", {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(profileData),
+    });
+  },
+
+  // Change password (protected)
+  changePassword: async (token, passwordData) => {
+    return apiCall("/readers/change-password", {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(passwordData),
+    });
+  },
+
+  // Forgot password - Request OTP
+  forgotPassword: async (email) => {
+    return apiCall("/readers/forgot-password", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    });
+  },
+
+  // Reset password with OTP
+  resetPassword: async (resetData) => {
+    return apiCall("/readers/reset-password", {
+      method: "POST",
+      body: JSON.stringify(resetData),
+    });
+  },
+
+  // Verify email with OTP
+  verifyEmail: async (verificationData) => {
+    return apiCall("/readers/verify-email", {
+      method: "POST",
+      body: JSON.stringify(verificationData),
+    });
+  },
+
+  // Resend OTP
+  resendOTP: async (email, type) => {
+    return apiCall("/readers/resend-otp", {
+      method: "POST",
+      body: JSON.stringify({ email, type }),
+    });
+  },
 };
 
 // Author Authentication APIs (for future use)

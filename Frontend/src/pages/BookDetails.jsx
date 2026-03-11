@@ -1,59 +1,102 @@
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { getBookById, mockBooks } from "../data/mockBooks";
 import "./Pages.css";
 
 export default function BookDetails() {
   const { id } = useParams();
-  const navigate = useNavigate();
   const book = getBookById(id);
   
   const [selectedThumbnail, setSelectedThumbnail] = useState(0);
-  const [selectedOption, setSelectedOption] = useState("buy");
-  const [quantity, setQuantity] = useState(1);
-  const [rentTimeLeft, setRentTimeLeft] = useState(14); // Demo: 14 days left
+  const [buyQuantity, setBuyQuantity] = useState(1);
+  const [rentQuantity, setRentQuantity] = useState(1);
+  const [showBuyPayNow, setShowBuyPayNow] = useState(false);
+  const [showRentPayNow, setShowRentPayNow] = useState(false);
 
-  // Demo countdown effect
+  // Check if book is in cart and update Pay Now buttons
   useEffect(() => {
-    if (selectedOption === "rent") {
-      const interval = setInterval(() => {
-        setRentTimeLeft(prev => Math.max(0, prev - 0.01)); // Slow countdown for demo
-      }, 1000);
-      return () => clearInterval(interval);
-    }
-  }, [selectedOption]);
+    const checkCartStatus = () => {
+      const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+      if (book) {
+        const hasBuyItem = cart.some(item => item.bookId === book.id && item.type === 'buy');
+        const hasRentItem = cart.some(item => item.bookId === book.id && item.type === 'rent');
+        setShowBuyPayNow(hasBuyItem);
+        setShowRentPayNow(hasRentItem);
+      }
+    };
 
-  // If book not found, show error
+    // Check on mount and when cart updates
+    checkCartStatus();
+    
+    window.addEventListener('cartUpdated', checkCartStatus);
+    window.addEventListener('openCart', checkCartStatus);
+    
+    return () => {
+      window.removeEventListener('cartUpdated', checkCartStatus);
+      window.removeEventListener('openCart', checkCartStatus);
+    };
+  }, [book]);
+
+  const handleAddToCart = (type) => {
+    const cartItem = {
+      bookId: book.id,
+      title: book.title,
+      nepaliTitle: book.nepaliTitle,
+      author: book.author,
+      type: type,
+      quantity: type === 'buy' ? buyQuantity : rentQuantity,
+      price: type === 'buy' ? book.buyPrice : book.rentPrice,
+      totalPrice: type === 'buy' ? book.buyPrice * buyQuantity : book.rentPrice * rentQuantity,
+      rentDays: type === 'rent' ? book.rentDays : null
+    };
+
+    const existingCart = JSON.parse(localStorage.getItem('cart') || '[]');
+    const existingItemIndex = existingCart.findIndex(
+      item => item.bookId === book.id && item.type === type
+    );
+
+    if (existingItemIndex > -1) {
+      existingCart[existingItemIndex].quantity += cartItem.quantity;
+      existingCart[existingItemIndex].totalPrice = 
+        existingCart[existingItemIndex].price * existingCart[existingItemIndex].quantity;
+    } else {
+      existingCart.push(cartItem);
+    }
+
+    localStorage.setItem('cart', JSON.stringify(existingCart));
+    
+    // Dispatch custom event to update cart count and open cart panel
+    window.dispatchEvent(new Event('cartUpdated'));
+    window.dispatchEvent(new Event('openCart'));
+  };
+
+  const getCartTotal = () => {
+    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+    return cart.reduce((total, item) => total + item.totalPrice, 0);
+  };
+
+  const handleCloseCart = () => {
+    window.dispatchEvent(new Event('closeCart'));
+  };
+
   if (!book) {
     return (
-      <div className="pageWrap">
-        <div className="bookNotFound">
-          <h1>Book Not Found</h1>
-          <p>The book you're looking for doesn't exist.</p>
-          <Link to="/browse" className="btnPrimary">
-            Browse All Books
-          </Link>
+      <div className="thuprai-page">
+        <div className="thuprai-container">
+          <div className="book-not-found">
+            <h1>Book Not Found</h1>
+            <p>The book you're looking for doesn't exist.</p>
+            <Link to="/browse" className="btn-primary-thuprai">Browse All Books</Link>
+          </div>
         </div>
       </div>
     );
   }
 
-  const handleAddToCart = () => {
-    const action = selectedOption === "buy" ? "purchased" : "rented";
-    alert(`Book ${action} successfully! (Demo)`);
-  };
-
-  const progressPercentage = (rentTimeLeft / book.rentDays) * 100;
   const relatedBooks = mockBooks.filter(b => b.id !== book.id).slice(0, 5);
 
-  // Generate placeholder cover with book initials and colors
-  const getPlaceholderCover = (book, isSmall = false) => {
-    const initials = book.title
-      .split(" ")
-      .slice(0, 2)
-      .map((w) => w[0]?.toUpperCase())
-      .join("");
-    
+  const getPlaceholderCover = (book, size = 'large') => {
+    const initials = book.title.split(" ").slice(0, 2).map((w) => w[0]?.toUpperCase()).join("");
     const colors = [
       'linear-gradient(135deg, #3b5723 0%, #4a6b2a 100%)',
       'linear-gradient(135deg, #2d4a1a 0%, #3b5723 100%)',
@@ -62,57 +105,33 @@ export default function BookDetails() {
       'linear-gradient(135deg, #5a8234 0%, #6b9142 100%)',
       'linear-gradient(135deg, #2d4a1a 0%, #4a6b2a 100%)'
     ];
-    
     const colorIndex = book.id % colors.length;
-    const size = isSmall ? '60px' : '100%';
-    const fontSize = isSmall ? '14px' : '32px';
-    
+    const dimensions = {
+      large: { width: '100%', height: '450px', fontSize: '48px', borderRadius: '8px' },
+      medium: { width: '80px', height: '110px', fontSize: '20px', borderRadius: '6px' },
+      small: { width: '60px', height: '85px', fontSize: '16px', borderRadius: '4px' }
+    };
+    const dim = dimensions[size];
     return (
-      <div 
-        className="book-placeholder-cover"
-        style={{
-          background: colors[colorIndex],
-          width: size,
-          height: isSmall ? '80px' : '400px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: 'white',
-          fontSize: fontSize,
-          fontWeight: '700',
-          borderRadius: isSmall ? '8px' : '16px',
-          position: 'relative',
-          overflow: 'hidden'
-        }}
-      >
-        <div 
-          style={{
-            position: 'absolute',
-            top: '10px',
-            left: '10px',
-            right: '10px',
-            height: '20px',
-            background: 'rgba(255, 255, 255, 0.2)',
-            borderRadius: '4px'
-          }}
-        />
-        <div 
-          style={{
-            position: 'absolute',
-            bottom: '10px',
-            left: '10px',
-            right: '10px',
-            height: '40px',
-            background: 'rgba(255, 255, 255, 0.1)',
-            borderRadius: '6px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: isSmall ? '10px' : '14px',
-            fontWeight: '500'
-          }}
-        >
-          {book.nepaliTitle || book.title}
+      <div className="book-placeholder-cover" style={{
+        background: colors[colorIndex], width: dim.width, height: dim.height,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        color: 'white', fontSize: dim.fontSize, fontWeight: '700',
+        borderRadius: dim.borderRadius, position: 'relative', overflow: 'hidden'
+      }}>
+        <div style={{
+          position: 'absolute', top: '10px', left: '10px', right: '10px',
+          height: size === 'large' ? '20px' : '10px',
+          background: 'rgba(255, 255, 255, 0.2)', borderRadius: '4px'
+        }} />
+        <div style={{
+          position: 'absolute', bottom: '10px', left: '10px', right: '10px',
+          height: size === 'large' ? '40px' : '20px',
+          background: 'rgba(255, 255, 255, 0.1)', borderRadius: '6px',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: size === 'large' ? '14px' : '8px', fontWeight: '500', padding: '0 8px'
+        }}>
+          {size === 'large' ? (book.nepaliTitle || book.title) : ''}
         </div>
         <span style={{ zIndex: 2 }}>{initials}</span>
       </div>
@@ -120,259 +139,198 @@ export default function BookDetails() {
   };
 
   return (
-    <div className="pageWrap">
-      {/* Breadcrumb */}
-      <div className="ijoriya-breadcrumb">
-        <Link to="/">Home</Link>
-        <span>›</span>
-        <Link to="/browse">Browse</Link>
-        <span>›</span>
-        <span>{book.title}</span>
-      </div>
+    <>
+      <div className="thuprai-page">
+        <div className="thuprai-container">
+          <div className="thuprai-breadcrumb">
+            <Link to="/">Home</Link>
+            <span>/</span>
+            <Link to="/browse">Books</Link>
+            <span>/</span>
+            <span>{book.title}</span>
+          </div>
 
-      <div className="ijoriya-container">
-        {/* Left Side - Cover & Thumbnails */}
-        <div className="ijoriya-left">
-          <div className="ijoriya-cover-section">
-            <div className="ijoriya-main-cover">
-              {getPlaceholderCover(book)}
+          <div className="thuprai-book-layout">
+            <div className="thuprai-book-cover">
+              {getPlaceholderCover(book, 'large')}
+              <div className="thuprai-thumbnails">
+                {[0, 1].map((index) => (
+                  <button key={index} className={`thuprai-thumb ${selectedThumbnail === index ? 'active' : ''}`}
+                    onClick={() => setSelectedThumbnail(index)}>
+                    {getPlaceholderCover(book, 'small')}
+                  </button>
+                ))}
+              </div>
+              <div className="thuprai-tags">
+                {book.categories?.map((category, index) => (
+                  <span key={index} className="thuprai-tag">{category}</span>
+                ))}
+              </div>
             </div>
+
+            <div className="thuprai-book-info">
+              <h1 className="thuprai-book-title">{book.title}</h1>
+              <h2 className="thuprai-book-subtitle">{book.nepaliTitle}</h2>
+              <div className="thuprai-author">
+                by <Link to={`/authors/${book.author.replace(/\s+/g, '-').toLowerCase()}`}>{book.author}</Link>
+              </div>
+              <div className="thuprai-rating">
+                <div className="thuprai-stars">
+                  {[...Array(5)].map((_, i) => (
+                    <span key={i} className={`star ${i < Math.floor(book.rating) ? 'filled' : ''}`}>★</span>
+                  ))}
+                </div>
+                <span className="thuprai-rating-text">{book.rating}</span>
+              </div>
+
+              <div className="thuprai-purchase-options">
+                <div className="thuprai-option-card">
+                  <div className="thuprai-option-header">
+                    <span className="thuprai-option-type">E-book</span>
+                    <span className="thuprai-option-price">Rs {book.buyPrice}</span>
+                  </div>
+                  {!showBuyPayNow ? (
+                    <>
+                      <div className="thuprai-option-actions">
+                        <div className="thuprai-quantity-selector">
+                          <button onClick={() => setBuyQuantity(Math.max(1, buyQuantity - 1))}>-</button>
+                          <input type="number" value={buyQuantity} readOnly />
+                          <button onClick={() => setBuyQuantity(buyQuantity + 1)}>+</button>
+                        </div>
+                        <button className="thuprai-btn-add-cart-full" onClick={() => handleAddToCart('buy')}>
+                          🛒 Add to cart
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <button className="thuprai-btn-pay">Pay now</button>
+                  )}
+                </div>
+
+                <div className="thuprai-option-card">
+                  <div className="thuprai-option-header">
+                    <span className="thuprai-option-type">E-book (Rent)</span>
+                    <span className="thuprai-option-price">Rs {book.rentPrice}</span>
+                  </div>
+                  <div className="thuprai-option-subtitle">{book.rentDays} days access</div>
+                  {!showRentPayNow ? (
+                    <>
+                      <div className="thuprai-option-actions">
+                        <div className="thuprai-quantity-selector">
+                          <button onClick={() => setRentQuantity(Math.max(1, rentQuantity - 1))}>-</button>
+                          <input type="number" value={rentQuantity} readOnly />
+                          <button onClick={() => setRentQuantity(rentQuantity + 1)}>+</button>
+                        </div>
+                        <button className="thuprai-btn-add-cart-full" onClick={() => handleAddToCart('rent')}>
+                          🛒 Add to cart
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <button className="thuprai-btn-pay">Rent now</button>
+                  )}
+                </div>
+              </div>
+
+              {book.nominations && book.nominations.length > 0 && (
+                <div className="thuprai-nominations">
+                  <h3>Nominations</h3>
+                  <ul>
+                    {book.nominations.map((nomination, index) => (
+                      <li key={index}>{nomination}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              <div className="thuprai-description">
+                <p>{book.descriptionEn}</p>
+                {book.descriptionNp && (
+                  <>
+                    <h4>नेपालीमा विवरण</h4>
+                    <p>{book.descriptionNp}</p>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="thuprai-reviews-section">
+            <h3 className="thuprai-reviews-title">Reader Reviews</h3>
             
-            <div className="ijoriya-thumbnails">
-              {[0, 1].map((index) => (
-                <button
-                  key={index}
-                  className={`ijoriya-thumb ${selectedThumbnail === index ? 'active' : ''}`}
-                  onClick={() => setSelectedThumbnail(index)}
-                >
-                  {getPlaceholderCover(book, true)}
-                </button>
+            <div className="thuprai-reviews-layout">
+              {/* Left: Review Form */}
+              <div className="thuprai-review-form">
+                <div className="review-form-icon">👤</div>
+                <h4>Share Your Thoughts</h4>
+                <p>Your review helps others make informed decisions</p>
+                <div className="review-stars-input">
+                  {[...Array(5)].map((_, i) => (
+                    <button key={i} className="star-btn">★</button>
+                  ))}
+                </div>
+                <p className="review-hint">Click on a star to start your review</p>
+              </div>
+
+              {/* Right: Reviews List */}
+              <div className="thuprai-reviews-list">
+                <div className="thuprai-reviews-header">
+                  <h4>Reader Reviews</h4>
+                  <div className="thuprai-review-summary">
+                    <span className="review-score">{book.rating}</span>
+                    <div className="review-stars">
+                      {[...Array(5)].map((_, i) => (
+                        <span key={i} className={`star ${i < Math.floor(book.rating) ? 'filled' : ''}`}>★</span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="thuprai-user-reviews">
+                  {book.userReviews && book.userReviews.length > 0 ? (
+                    book.userReviews.map((review) => (
+                      <div key={review.id} className="thuprai-review-item">
+                        <div className="review-avatar">{review.reviewerAvatar}</div>
+                        <div className="review-content">
+                          <div className="review-header">
+                            <span className="reviewer-name">{review.reviewerName}</span>
+                            <span className="review-date">{review.date}</span>
+                          </div>
+                          <div className="review-rating">
+                            {[...Array(5)].map((_, i) => (
+                              <span key={i} className={`star ${i < review.rating ? 'filled' : ''}`}>★</span>
+                            ))}
+                          </div>
+                          <p className="review-text">{review.reviewText}</p>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="no-reviews">
+                      <p>No reviews yet. Be the first to review this book!</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="thuprai-related-section">
+            <h3>Related Books</h3>
+            <div className="thuprai-related-grid">
+              {relatedBooks.map((relatedBook) => (
+                <Link key={relatedBook.id} to={`/book/${relatedBook.id}`} className="thuprai-related-card">
+                  {getPlaceholderCover(relatedBook, 'medium')}
+                  <div className="related-book-info">
+                    <div className="related-book-title">{relatedBook.title}</div>
+                    <div className="related-book-author">{relatedBook.author}</div>
+                  </div>
+                </Link>
               ))}
             </div>
           </div>
-
-          {/* All Editions Section */}
-          <div className="ijoriya-editions">
-            <h3>All Editions</h3>
-            <div className="ijoriya-edition-card">
-              <div style={{ width: '50px', height: '70px' }}>
-                {getPlaceholderCover(book, true)}
-              </div>
-              <div className="ijoriya-edition-info">
-                <div className="ijoriya-edition-type">E-book, Digital Edition</div>
-                <div className="ijoriya-edition-details">
-                  <div>ISBN-13: 978{book.id}9937746{book.id}95</div>
-                  <div>Pustakyatra, 2024</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Right Side - Book Info */}
-        <div className="ijoriya-right">
-          {/* Book Header */}
-          <div className="ijoriya-header">
-            <h1 className="ijoriya-title">{book.title}</h1>
-            <h2 className="ijoriya-nepali-title">{book.nepaliTitle}</h2>
-            <div className="ijoriya-author">
-              by <Link to={`/authors/${book.author.replace(/\s+/g, '-').toLowerCase()}`}>
-                {book.author}
-              </Link>
-            </div>
-
-            {/* Rating & Categories */}
-            <div className="ijoriya-meta">
-              <div className="ijoriya-rating">
-                <div className="ijoriya-stars">
-                  {[...Array(5)].map((_, i) => (
-                    <span key={i} className={`star ${i < Math.floor(book.rating) ? 'filled' : ''}`}>
-                      ★
-                    </span>
-                  ))}
-                </div>
-                <span className="ijoriya-rating-text">{book.rating}</span>
-              </div>
-
-              <div className="ijoriya-categories">
-                {book.categories?.map((category, index) => (
-                  <span key={index} className="ijoriya-category">{category}</span>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Purchase Cards */}
-          <div className="ijoriya-purchase-section">
-            <div className="ijoriya-purchase-cards">
-              {/* Buy Card */}
-              <div className={`ijoriya-purchase-card ${selectedOption === 'buy' ? 'selected' : ''}`}>
-                <div className="ijoriya-card-header">
-                  <h3>E-book</h3>
-                  <div className="ijoriya-price">Rs {book.buyPrice}</div>
-                </div>
-                <div className="ijoriya-card-subtitle">Lifetime Access</div>
-                <div className="ijoriya-card-actions">
-                  <div className="ijoriya-quantity">
-                    <button onClick={() => setQuantity(Math.max(1, quantity - 1))}>-</button>
-                    <span>{quantity}</span>
-                    <button onClick={() => setQuantity(quantity + 1)}>+</button>
-                  </div>
-                  <button 
-                    className="ijoriya-add-btn"
-                    onClick={() => {
-                      setSelectedOption('buy');
-                      handleAddToCart();
-                    }}
-                  >
-                    Add to cart
-                  </button>
-                </div>
-                <button className="ijoriya-read-now">Read now</button>
-              </div>
-
-              {/* Rent Card */}
-              <div className={`ijoriya-purchase-card ${selectedOption === 'rent' ? 'selected' : ''}`}>
-                <div className="ijoriya-card-header">
-                  <h3>E-book (Rent)</h3>
-                  <div className="ijoriya-price">Rs {book.rentPrice}</div>
-                </div>
-                <div className="ijoriya-card-subtitle">{book.rentDays} days access</div>
-                
-                {selectedOption === 'rent' && (
-                  <div className="ijoriya-rent-status">
-                    <div className="ijoriya-time-left">
-                      {Math.floor(rentTimeLeft)} days left
-                    </div>
-                    <div className="ijoriya-progress-bar">
-                      <div 
-                        className="ijoriya-progress-fill"
-                        style={{ width: `${progressPercentage}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                )}
-
-                <div className="ijoriya-card-actions">
-                  <div className="ijoriya-quantity">
-                    <button onClick={() => setQuantity(Math.max(1, quantity - 1))}>-</button>
-                    <span>{quantity}</span>
-                    <button onClick={() => setQuantity(quantity + 1)}>+</button>
-                  </div>
-                  <button 
-                    className="ijoriya-add-btn"
-                    onClick={() => {
-                      setSelectedOption('rent');
-                      handleAddToCart();
-                    }}
-                  >
-                    Add to cart
-                  </button>
-                </div>
-                <button className="ijoriya-rent-now">Rent now</button>
-              </div>
-            </div>
-          </div>
-
-          {/* Nominations */}
-          {book.nominations && book.nominations.length > 0 && (
-            <div className="ijoriya-nominations">
-              <h3>Nominations</h3>
-              <div className="ijoriya-nominations-list">
-                {book.nominations.map((nomination, index) => (
-                  <span key={index} className="ijoriya-nomination">{nomination}</span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Description */}
-          <div className="ijoriya-description">
-            <div className="ijoriya-desc-english">
-              <p>{book.descriptionEn}</p>
-            </div>
-            
-            <div className="ijoriya-desc-nepali">
-              <h4>नेपालीमा विवरण</h4>
-              <p>{book.descriptionNp}</p>
-            </div>
-          </div>
-
-          {/* Reviews Section */}
-          <div className="ijoriya-reviews">
-            <div className="ijoriya-reviews-header">
-              <h3>Reader Reviews</h3>
-              <div className="ijoriya-review-summary">
-                <div className="ijoriya-review-score">{book.rating}</div>
-                <div className="ijoriya-review-stars">
-                  {[...Array(5)].map((_, i) => (
-                    <span key={i} className={`star ${i < Math.floor(book.rating) ? 'filled' : ''}`}>
-                      ★
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="ijoriya-review-form">
-              <h4>Share Your Thoughts</h4>
-              <p>Your review helps others make informed decisions</p>
-              <div className="ijoriya-review-stars-input">
-                {[...Array(5)].map((_, i) => (
-                  <button key={i} className="star-btn">★</button>
-                ))}
-              </div>
-              <p>Click on a star to start your review</p>
-            </div>
-
-            <div className="ijoriya-sample-reviews">
-              {book.userReviews && book.userReviews.length > 0 ? (
-                book.userReviews.map((review) => (
-                  <div key={review.id} className="ijoriya-review">
-                    <div className="ijoriya-reviewer">
-                      <div className="ijoriya-reviewer-avatar">{review.reviewerAvatar}</div>
-                      <div className="ijoriya-reviewer-info">
-                        <div className="ijoriya-reviewer-name">{review.reviewerName}</div>
-                        <div className="ijoriya-review-date">{review.date}</div>
-                        <div className="ijoriya-review-stars">
-                          {[...Array(5)].map((_, i) => (
-                            <span key={i} className={`star ${i < review.rating ? 'filled' : ''}`}>★</span>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="ijoriya-review-text">
-                      {review.reviewText}
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="ijoriya-no-reviews">
-                  <p>No reviews yet. Be the first to review this book!</p>
-                </div>
-              )}
-            </div>
-          </div>
         </div>
       </div>
-
-      {/* Related Books */}
-      <div className="ijoriya-related">
-        <h3>Related Books</h3>
-        <div className="ijoriya-related-grid">
-          {relatedBooks.map((relatedBook) => (
-            <Link key={relatedBook.id} to={`/book/${relatedBook.id}`} className="ijoriya-related-book">
-              <div style={{ width: '100%', height: '200px' }}>
-                {getPlaceholderCover(relatedBook)}
-              </div>
-              <div className="ijoriya-related-info">
-                <div className="ijoriya-related-title">{relatedBook.title}</div>
-                <div className="ijoriya-related-author">{relatedBook.author}</div>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </div>
-    </div>
+    </>
   );
 }

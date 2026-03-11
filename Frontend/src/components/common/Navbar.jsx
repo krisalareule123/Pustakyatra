@@ -7,12 +7,13 @@ export default function Navbar() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState(null);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [cartCount, setCartCount] = useState(0);
   const dropdownRef = useRef(null);
 
   // Check login status on component mount and listen for storage changes
   useEffect(() => {
     const checkAuthStatus = () => {
-      const token = localStorage.getItem('authToken');
+      const token = localStorage.getItem('token') || localStorage.getItem('authToken');
       const userData = localStorage.getItem('userData');
       
       if (token && userData) {
@@ -30,14 +31,42 @@ export default function Navbar() {
     // Listen for storage changes (for cross-tab updates)
     window.addEventListener('storage', checkAuthStatus);
     
-    // Listen for custom login event
+    // Listen for custom login/logout events
     window.addEventListener('userLoggedIn', checkAuthStatus);
+    window.addEventListener('userLoggedOut', checkAuthStatus);
 
     return () => {
       window.removeEventListener('storage', checkAuthStatus);
       window.removeEventListener('userLoggedIn', checkAuthStatus);
+      window.removeEventListener('userLoggedOut', checkAuthStatus);
     };
   }, []);
+
+  // Update cart count
+  useEffect(() => {
+    const updateCartCount = () => {
+      const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+      const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+      setCartCount(totalItems);
+    };
+
+    // Update on mount
+    updateCartCount();
+
+    // Listen for cart updates (both storage and custom event)
+    window.addEventListener('storage', updateCartCount);
+    window.addEventListener('cartUpdated', updateCartCount);
+
+    return () => {
+      window.removeEventListener('storage', updateCartCount);
+      window.removeEventListener('cartUpdated', updateCartCount);
+    };
+  }, []);
+
+  const handleCartClick = () => {
+    // Trigger custom event to open cart panel
+    window.dispatchEvent(new Event('openCart'));
+  };
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -52,11 +81,20 @@ export default function Navbar() {
   }, []);
 
   const handleLogout = () => {
+    // Clear all auth data
+    localStorage.removeItem('token');
     localStorage.removeItem('authToken');
     localStorage.removeItem('userData');
+    
+    // Update state
     setIsLoggedIn(false);
     setUser(null);
     setShowDropdown(false);
+    
+    // Trigger custom event to update other components
+    window.dispatchEvent(new Event('userLoggedOut'));
+    
+    // Navigate to home
     navigate('/');
   };
   return (
@@ -94,11 +132,11 @@ export default function Navbar() {
 
           {/* Actions Section */}
           <div className="navbar-actions">
-            <button type="button" className="action-btn cart-btn" aria-label="Shopping Cart">
+            <button type="button" className="action-btn cart-btn" aria-label="Shopping Cart" onClick={handleCartClick}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
                 <path d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13v6a2 2 0 002 2h6a2 2 0 002-2v-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
-              <span className="cart-count">0</span>
+              {cartCount > 0 && <span className="cart-count">{cartCount}</span>}
             </button>
 
             {isLoggedIn ? (
