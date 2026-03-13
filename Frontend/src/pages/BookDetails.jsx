@@ -1,6 +1,7 @@
 import { useParams, Link } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { getBookById, mockBooks } from "../data/mockBooks";
+import ReviewSection from "../components/ReviewSection";
 import "./Pages.css";
 
 export default function BookDetails() {
@@ -255,65 +256,8 @@ export default function BookDetails() {
             </div>
           </div>
 
-          <div className="thuprai-reviews-section">
-            <h3 className="thuprai-reviews-title">Reader Reviews</h3>
-            
-            <div className="thuprai-reviews-layout">
-              {/* Left: Review Form */}
-              <div className="thuprai-review-form">
-                <div className="review-form-icon">👤</div>
-                <h4>Share Your Thoughts</h4>
-                <p>Your review helps others make informed decisions</p>
-                <div className="review-stars-input">
-                  {[...Array(5)].map((_, i) => (
-                    <button key={i} className="star-btn">★</button>
-                  ))}
-                </div>
-                <p className="review-hint">Click on a star to start your review</p>
-              </div>
-
-              {/* Right: Reviews List */}
-              <div className="thuprai-reviews-list">
-                <div className="thuprai-reviews-header">
-                  <h4>Reader Reviews</h4>
-                  <div className="thuprai-review-summary">
-                    <span className="review-score">{book.rating}</span>
-                    <div className="review-stars">
-                      {[...Array(5)].map((_, i) => (
-                        <span key={i} className={`star ${i < Math.floor(book.rating) ? 'filled' : ''}`}>★</span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="thuprai-user-reviews">
-                  {book.userReviews && book.userReviews.length > 0 ? (
-                    book.userReviews.map((review) => (
-                      <div key={review.id} className="thuprai-review-item">
-                        <div className="review-avatar">{review.reviewerAvatar}</div>
-                        <div className="review-content">
-                          <div className="review-header">
-                            <span className="reviewer-name">{review.reviewerName}</span>
-                            <span className="review-date">{review.date}</span>
-                          </div>
-                          <div className="review-rating">
-                            {[...Array(5)].map((_, i) => (
-                              <span key={i} className={`star ${i < review.rating ? 'filled' : ''}`}>★</span>
-                            ))}
-                          </div>
-                          <p className="review-text">{review.reviewText}</p>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="no-reviews">
-                      <p>No reviews yet. Be the first to review this book!</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
+          {/* Reviews and Ratings Section */}
+          <ReviewSection bookId={id} />
 
           <div className="thuprai-related-section">
             <h3>Related Books</h3>
