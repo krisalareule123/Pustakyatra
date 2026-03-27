@@ -1,102 +1,164 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const crypto = require("crypto");
 const db = require("../config/db");
-const { sendWelcomeEmail, sendOTPEmail, sendPasswordResetEmail } = require("../config/email");
+const { sendWelcomeEmail, sendOTPEmail, sendPasswordResetEmail, sendLoginOTPEmail } = require("../config/email");
 
 const registerReader = async (req, res) => {
   try {
     const { fullName, email, password } = req.body;
 
     if (!fullName || !email || !password) {
-      return res.status(400).json({
-        success: false,
-        message: "Please provide all required fields"
-      });
+      return res.status(400).json({ success: false, message: "Please provide all required fields" });
     }
 
+    // Full name validation: letters only, at least 2 words, each word ≥ 2 chars
+    const trimmedName = fullName.trim();
+    if (/[^a-zA-Z\s]/.test(trimmedName)) {
+      return res.status(400).json({ success: false, message: "Full name should only contain letters." });
+    }
+    const nameParts = trimmedName.split(/\s+/).filter(Boolean);
+    if (nameParts.length < 2) {
+      return res.status(400).json({ success: false, message: "Please enter your full name (first and last name)." });
+    }
+    if (nameParts.some(w => w.length < 2)) {
+      return res.status(400).json({ success: false, message: "Each part of your name must be at least 2 letters." });
+    }
+
+    // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      return res.status(400).json({
-        success: false,
-        message: "Please provide a valid email address"
-      });
+      return res.status(400).json({ success: false, message: "Please provide a valid email address" });
     }
 
-    if (password.length < 6) {
-      return res.status(400).json({
-        success: false,
-        message: "Password must be at least 6 characters long"
-      });
+    // Password validation: min 8 chars, uppercase, lowercase, number, special char
+    if (password.length < 8) {
+      return res.status(400).json({ success: false, message: "Password must be at least 8 characters." });
+    }
+    if (!/[A-Z]/.test(password)) {
+      return res.status(400).json({ success: false, message: "Password must include at least one uppercase letter." });
+    }
+    if (!/[a-z]/.test(password)) {
+      return res.status(400).json({ success: false, message: "Password must include at least one lowercase letter." });
+    }
+    if (!/[0-9]/.test(password)) {
+      return res.status(400).json({ success: false, message: "Password must include at least one number." });
+    }
+    if (!/[^A-Za-z0-9]/.test(password)) {
+      return res.status(400).json({ success: false, message: "Password must include at least one special character (e.g. @, #, !)." });
     }
 
     const checkEmailQuery = "SELECT * FROM readers WHERE email = ?";
     db.query(checkEmailQuery, [email], async (err, results) => {
       if (err) {
         console.error("Database error:", err);
-        return res.status(500).json({
-          success: false,
-          message: "Server error. Please try again later"
-        });
+        return res.status(500).json({ success: false, message: "Server error. Please try again later" });
       }
 
       if (results.length > 0) {
-        return res.status(400).json({
-          success: false,
-          message: "An account with this email already exists. Please sign in instead."
-        });
+        return res.status(400).json({ success: false, message: "An account with this email already exists. Please sign in instead." });
       }
 
       const hashedPassword = await bcrypt.hash(password, 10);
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
       const insertQuery = `
-        INSERT INTO readers (full_name, email, password)
-        VALUES (?, ?, ?)
+        INSERT INTO readers (full_name, email, password, otp_code, otp_expiry, is_verified)
+        VALUES (?, ?, ?, ?, DATE_ADD(NOW(), INTERVAL 10 MINUTE), 0)
       `;
 
-      db.query(insertQuery, [fullName, email, hashedPassword], async (err, result) => {
+      db.query(insertQuery, [trimmedName, email, hashedPassword, otp], async (err, result) => {
         if (err) {
           console.error("Database error:", err);
-          return res.status(500).json({
-            success: false,
-            message: "Failed to create account. Please try again"
-          });
+          return res.status(500).json({ success: false, message: "Failed to create account. Please try again" });
         }
 
-        sendWelcomeEmail(email, fullName).catch((err) => {
-          console.error("Email sending failed:", err.message);
-        });
+        console.log("✅ Reader registered. Sending verification OTP to:", email);
 
-        const token = jwt.sign(
-          { reader_id: result.insertId, email: email },
-          process.env.JWT_SECRET,
-          { expiresIn: "7d" }
+        // Send OTP email (non-blocking)
+        sendOTPEmail(email, fullName, otp).catch((e) =>
+          console.error("Email sending failed:", e.message)
         );
 
         res.status(201).json({
           success: true,
-          message: "Account created successfully! Welcome to Pustakyatra.",
-          token,
-          user: {
-            reader_id: result.insertId,
-            fullName,
-            email
-          }
+          requiresOTP: true,
+          message: "Account created! Please verify your email to continue.",
+          email: email
         });
       });
     });
   } catch (error) {
     console.error("Registration error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Server error. Please try again later"
+    res.status(500).json({ success: false, message: "Server error. Please try again later" });
+  }
+};
+
+// Verify registration OTP and issue JWT
+const verifyRegisterOTP = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+      return res.status(400).json({ success: false, message: "Please provide email and OTP" });
+    }
+
+    const query = `
+      SELECT * FROM readers
+      WHERE email = ? AND otp_code = ? AND otp_expiry > NOW()
+    `;
+
+    db.query(query, [email, otp], async (err, results) => {
+      if (err) {
+        console.error("Database error:", err);
+        return res.status(500).json({ success: false, message: "Server error. Please try again later" });
+      }
+
+      if (results.length === 0) {
+        return res.status(400).json({ success: false, message: "Invalid or expired OTP. Please try again." });
+      }
+
+      const user = results[0];
+
+      // Mark as verified and clear OTP
+      db.query(
+        "UPDATE readers SET is_verified = 1, otp_code = NULL, otp_expiry = NULL WHERE email = ?",
+        [email]
+      );
+
+      // Send welcome email (non-blocking)
+      sendWelcomeEmail(email, user.full_name).catch((e) =>
+        console.error("Welcome email failed:", e.message)
+      );
+
+      // Issue JWT
+      const token = jwt.sign(
+        { reader_id: user.reader_id, email: user.email },
+        process.env.JWT_SECRET,
+        { expiresIn: "7d" }
+      );
+
+      res.status(200).json({
+        success: true,
+        message: "Email verified! Welcome to Pustakyatra.",
+        token,
+        user: {
+          reader_id: user.reader_id,
+          fullName: user.full_name,
+          email: user.email
+        }
+      });
     });
+  } catch (error) {
+    console.error("Verify register OTP error:", error);
+    res.status(500).json({ success: false, message: "Server error. Please try again later" });
   }
 };
 
 const loginReader = async (req, res) => {
   try {
     const { email, password } = req.body;
+
+    console.log("🔐 Login attempt for:", email);
 
     if (!email || !password) {
       return res.status(400).json({
@@ -132,6 +194,100 @@ const loginReader = async (req, res) => {
         });
       }
 
+      // ✅ Credentials valid — generate OTP, do NOT issue JWT yet
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      console.log("✅ Credentials valid. Generating login OTP for:", email);
+
+      const updateQuery = `
+        UPDATE readers
+        SET otp_code = ?, otp_expiry = DATE_ADD(NOW(), INTERVAL 10 MINUTE)
+        WHERE email = ?
+      `;
+
+      db.query(updateQuery, [otp, email], async (err) => {
+        if (err) {
+          console.error("Database error saving OTP:", err);
+          return res.status(500).json({
+            success: false,
+            message: "Server error. Please try again later"
+          });
+        }
+
+        console.log("✅ OTP saved to DB. Sending email...");
+
+        // Send login OTP email
+        const emailResult = await sendLoginOTPEmail(email, user.full_name, otp);
+
+        if (!emailResult.success) {
+          console.error("❌ Failed to send OTP email:", emailResult.error);
+          // Still return requiresOTP so user can proceed (dev fallback)
+          // In production you may want to block here
+        }
+
+        console.log("✅ Login OTP flow complete. Returning requiresOTP: true");
+
+        // ✅ Return OTP required — no token here
+        res.status(200).json({
+          success: true,
+          requiresOTP: true,
+          message: emailResult.success
+            ? "OTP sent to your email. Please verify to complete login."
+            : "OTP generated. Check your email (or server logs for dev).",
+          email: email
+        });
+      });
+    });
+  } catch (error) {
+    console.error("Login error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error. Please try again later"
+    });
+  }
+};
+
+// Verify Login OTP and issue JWT
+const verifyLoginOTP = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide email and OTP"
+      });
+    }
+
+    const query = `
+      SELECT * FROM readers
+      WHERE email = ? AND otp_code = ? AND otp_expiry > NOW()
+    `;
+
+    db.query(query, [email, otp], async (err, results) => {
+      if (err) {
+        console.error("Database error:", err);
+        return res.status(500).json({
+          success: false,
+          message: "Server error. Please try again later"
+        });
+      }
+
+      if (results.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid or expired OTP. Please try again."
+        });
+      }
+
+      const user = results[0];
+
+      // Clear OTP after successful verification
+      db.query(
+        "UPDATE readers SET otp_code = NULL, otp_expiry = NULL WHERE email = ?",
+        [email]
+      );
+
+      // Generate JWT token
       const token = jwt.sign(
         { reader_id: user.reader_id, email: user.email },
         process.env.JWT_SECRET,
@@ -150,7 +306,7 @@ const loginReader = async (req, res) => {
       });
     });
   } catch (error) {
-    console.error("Login error:", error);
+    console.error("Verify login OTP error:", error);
     res.status(500).json({
       success: false,
       message: "Server error. Please try again later"
@@ -194,7 +350,7 @@ const getReaderProfile = (req, res) => {
           email: user.email,
           phone: user.phone,
           address: user.address,
-          emailVerified: user.email_verified,
+          emailVerified: user.is_verified,
           createdAt: user.created_at
         }
       });
@@ -311,17 +467,24 @@ const changePassword = async (req, res) => {
     const { currentPassword, newPassword } = req.body;
 
     if (!currentPassword || !newPassword) {
-      return res.status(400).json({
-        success: false,
-        message: "Please provide current and new password"
-      });
+      return res.status(400).json({ success: false, message: "Please provide current and new password" });
     }
 
-    if (newPassword.length < 6) {
-      return res.status(400).json({
-        success: false,
-        message: "New password must be at least 6 characters long"
-      });
+    // Strong password validation
+    if (newPassword.length < 8) {
+      return res.status(400).json({ success: false, message: "New password must be at least 8 characters." });
+    }
+    if (!/[A-Z]/.test(newPassword)) {
+      return res.status(400).json({ success: false, message: "New password must include at least one uppercase letter." });
+    }
+    if (!/[a-z]/.test(newPassword)) {
+      return res.status(400).json({ success: false, message: "New password must include at least one lowercase letter." });
+    }
+    if (!/[0-9]/.test(newPassword)) {
+      return res.status(400).json({ success: false, message: "New password must include at least one number." });
+    }
+    if (!/[^A-Za-z0-9]/.test(newPassword)) {
+      return res.status(400).json({ success: false, message: "New password must include at least one special character (e.g. @, #, !)." });
     }
 
     const query = "SELECT * FROM readers WHERE reader_id = ?";
@@ -463,17 +626,23 @@ const resetPassword = async (req, res) => {
     const { email, otp, newPassword } = req.body;
 
     if (!email || !otp || !newPassword) {
-      return res.status(400).json({
-        success: false,
-        message: "Please provide email, OTP, and new password"
-      });
+      return res.status(400).json({ success: false, message: "Please provide email, OTP, and new password" });
     }
 
-    if (newPassword.length < 6) {
-      return res.status(400).json({
-        success: false,
-        message: "Password must be at least 6 characters long"
-      });
+    if (newPassword.length < 8) {
+      return res.status(400).json({ success: false, message: "Password must be at least 8 characters." });
+    }
+    if (!/[A-Z]/.test(newPassword)) {
+      return res.status(400).json({ success: false, message: "Password must include at least one uppercase letter." });
+    }
+    if (!/[a-z]/.test(newPassword)) {
+      return res.status(400).json({ success: false, message: "Password must include at least one lowercase letter." });
+    }
+    if (!/[0-9]/.test(newPassword)) {
+      return res.status(400).json({ success: false, message: "Password must include at least one number." });
+    }
+    if (!/[^A-Za-z0-9]/.test(newPassword)) {
+      return res.status(400).json({ success: false, message: "Password must include at least one special character (e.g. @, #, !)." });
     }
 
     const query = `
@@ -581,7 +750,7 @@ const verifyEmail = async (req, res) => {
 
       const updateQuery = `
         UPDATE readers
-        SET email_verified = 1, otp_code = NULL, otp_expiry = NULL
+        SET is_verified = 1, otp_code = NULL, otp_expiry = NULL
         WHERE email = ?
       `;
 
@@ -696,7 +865,9 @@ const resendOTP = async (req, res) => {
 
 module.exports = {
   registerReader,
+  verifyRegisterOTP,
   loginReader,
+  verifyLoginOTP,
   getReaderProfile,
   updateProfile,
   changePassword,

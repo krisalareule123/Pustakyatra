@@ -147,4 +147,51 @@ const sendPasswordResetEmail = async (userEmail, userName, otp) => {
   }
 };
 
-module.exports = { sendWelcomeEmail, sendOTPEmail, sendPasswordResetEmail };
+const sendLoginOTPEmail = async (userEmail, userName, otp) => {
+  const mailOptions = {
+    from: process.env.EMAIL_FROM,
+    to: userEmail,
+    subject: "Your Login OTP - Pustakyatra 🔐",
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #ddd; border-radius: 12px; overflow: hidden;">
+        <div style="background: #3b5723; color: white; padding: 30px; text-align: center;">
+          <h1 style="margin: 0;">📚 Pustakyatra</h1>
+          <p style="margin: 10px 0 0;">Login Verification</p>
+        </div>
+
+        <div style="padding: 30px; background: #ffffff;">
+          <h2 style="color: #1a2912;">Hello, ${userName}!</h2>
+          <p>You are trying to login to your Pustakyatra account. Use the OTP below to complete your login:</p>
+          
+          <div style="background: #f8f9fa; border: 2px dashed #3b5723; border-radius: 8px; padding: 20px; text-align: center; margin: 20px 0;">
+            <h1 style="color: #3b5723; font-size: 36px; margin: 0; letter-spacing: 8px;">${otp}</h1>
+          </div>
+
+          <p style="color: #dc3545; font-weight: bold;">⏰ This OTP will expire in 10 minutes.</p>
+          <p style="color: #856404; background: #fff3cd; padding: 12px; border-radius: 6px; border-left: 4px solid #ffc107;">
+            <strong>⚠️ Security Notice:</strong> If you did not attempt to login, please ignore this email and consider changing your password.
+          </p>
+          
+          <p style="margin-top: 30px;">Best regards,<br><strong>The Pustakyatra Team</strong></p>
+        </div>
+
+        <div style="background: #f8f9fa; padding: 20px; text-align: center; color: #6c757d; font-size: 14px;">
+          <p style="margin: 5px 0;"><strong>Pustakyatra</strong></p>
+          <p style="margin: 5px 0;">Kathmandu, Nepal</p>
+          <p style="margin: 5px 0;">pustakyatra072@gmail.com</p>
+        </div>
+      </div>
+    `
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log("✅ Login OTP email sent to:", userEmail);
+    return { success: true };
+  } catch (error) {
+    console.error("❌ Error sending login OTP email:", error.message);
+    return { success: false, error: error.message };
+  }
+};
+
+module.exports = { sendWelcomeEmail, sendOTPEmail, sendPasswordResetEmail, sendLoginOTPEmail };

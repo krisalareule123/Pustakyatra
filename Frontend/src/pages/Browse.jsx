@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { mockBooks } from "../data/mockBooks";
+import { mockBooks, generateSlug } from "../data/mockBooks";
 import "./Pages.css";
 
 const categories = ["All Books", "Classics", "Novels", "Poetry", "Contemporary"];
@@ -102,7 +102,7 @@ export default function Browse() {
 
         <div className="books-grid">
           {mockBooks.map((book) => (
-            <Link key={book.id} to={`/book/${book.id}`} className="book-card">
+            <Link key={book.id} to={`/book/${generateSlug(book.title, book.id)}`} className="book-card">
               <div className="book-cover">
                 <div className="cover-placeholder">
                   <div className="cover-pattern"></div>

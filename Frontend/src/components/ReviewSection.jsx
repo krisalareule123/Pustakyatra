@@ -38,10 +38,7 @@ export default function ReviewSection({ bookId }) {
 
   const fetchReviews = async () => {
     try {
-      console.log("Fetching reviews for bookId:", bookId);
       const response = await reviewAPI.getReviewsByBook(bookId);
-      console.log("Reviews response:", response);
-      
       if (response.success) {
         setReviews(response.reviews);
         setStats(response.stats);
@@ -53,10 +50,7 @@ export default function ReviewSection({ bookId }) {
 
   const fetchUserReview = async (token) => {
     try {
-      console.log("Fetching user review for bookId:", bookId);
       const response = await reviewAPI.getUserReview(token, bookId);
-      console.log("User review response:", response);
-      
       if (response.success && response.review) {
         setUserReview(response.review);
         setRating(response.review.rating);
@@ -97,36 +91,22 @@ export default function ReviewSection({ bookId }) {
     try {
       const token = localStorage.getItem("token") || localStorage.getItem("authToken");
       
-      // Create payload with proper types
       const payload = {
         bookId: Number(bookId),
         rating: Number(rating),
         reviewText: reviewText.trim() || null,
       };
-      
-      console.log("=== SUBMITTING REVIEW ===");
-      console.log("bookId from props:", bookId);
-      console.log("rating from state:", rating);
-      console.log("reviewText from state:", reviewText);
-      console.log("Final payload:", payload);
-      console.log("Token:", token ? "exists" : "missing");
 
       const response = await reviewAPI.addReview(token, payload);
-      
-      console.log("Review submission response:", response);
 
       if (response.success) {
         setMessage({ type: "success", text: response.message });
         setShowReviewForm(false);
-        
-        // Refresh reviews
         fetchReviews();
         fetchUserReview(token);
-        
         setTimeout(() => setMessage({ type: "", text: "" }), 3000);
       }
     } catch (error) {
-      console.error("Review submission error:", error);
       setMessage({ type: "error", text: error.message || "Failed to submit review" });
     } finally {
       setLoading(false);

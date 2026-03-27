@@ -354,6 +354,22 @@ export const getBookById = (id) => {
   return mockBooks.find(book => book.id === parseInt(id));
 };
 
+// Helper function to generate slug from title
+export const generateSlug = (title, id) => {
+  const slug = title
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, "")   // remove special chars
+    .trim()
+    .replace(/\s+/g, "-");           // spaces to hyphens
+  return `${slug}-${id}`;
+};
+
+// Helper function to extract ID from slug (e.g. "seto-bagh-1" → 1)
+export const getIdFromSlug = (slug) => {
+  const parts = slug.split("-");
+  return parseInt(parts[parts.length - 1]);
+};
+
 // Helper function to get featured books
 export const getFeaturedBooks = () => {
   return mockBooks.filter(book => book.featured);

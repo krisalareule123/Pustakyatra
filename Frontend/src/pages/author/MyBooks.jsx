@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { generateSlug } from "../../data/mockBooks";
 
 export default function MyBooks() {
   const navigate = useNavigate();
@@ -64,8 +65,8 @@ export default function MyBooks() {
     }
   };
 
-  const handleView = (bookId) => {
-    navigate(`/book/${bookId}`);
+  const handleView = (bookId, bookTitle) => {
+    navigate(`/book/${generateSlug(bookTitle, bookId)}`);
   };
 
   return (
@@ -121,7 +122,7 @@ export default function MyBooks() {
                     <div className="table-actions">
                       <button 
                         className="action-btn-small view" 
-                        onClick={() => handleView(book.id)}
+                        onClick={() => handleView(book.id, book.title)}
                         title="View"
                       >
                         View

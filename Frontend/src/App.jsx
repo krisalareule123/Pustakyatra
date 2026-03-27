@@ -62,7 +62,7 @@ export default function App() {
               <Route path="/categories" element={<Categories />} />
               <Route path="/authors" element={<Authors />} />
               <Route path="/about" element={<About />} />
-              <Route path="/book/:id" element={<BookDetails />} />
+              <Route path="/book/:slug" element={<BookDetails />} />
               <Route path="/dashboard" element={<UserDashboard />} />
             </Routes>
             <Footer />

@@ -458,3 +458,41 @@
     font-size: 16px; /* Prevents zoom on iOS */
   }
 }
+
+/* OTP Step */
+.regShellOTP {
+  justify-content: center;
+}
+
+.otpInputField {
+  width: 100%;
+  padding: 14px 16px;
+  font-size: 24px;
+  letter-spacing: 8px;
+  text-align: center;
+  border: 2px solid #dee2e6;
+  border-radius: 8px;
+  outline: none;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.otpInputField:focus {
+  border-color: #3b5723;
+  box-shadow: 0 0 0 3px rgba(59, 87, 35, 0.1);
+}
+
+.otpResendBtn {
+  background: none;
+  border: none;
+  color: #3b5723;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+}
+
+.otpResendBtn:hover {
+  color: #2d4419;
+}

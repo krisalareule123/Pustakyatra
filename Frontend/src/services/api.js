@@ -4,19 +4,17 @@ const API_BASE_URL = "http://localhost:5001/api";
 // Helper function for API calls
 const apiCall = async (endpoint, options = {}) => {
   try {
-    console.log("API Call:", endpoint, options);
-    
+    const { headers: extraHeaders, ...restOptions } = options;
+
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      ...restOptions,
       headers: {
         "Content-Type": "application/json",
-        ...options.headers,
+        ...extraHeaders,
       },
-      ...options,
     });
 
-    console.log("API Response status:", response.status);
     const data = await response.json();
-    console.log("API Response data:", data);
 
     if (!response.ok) {
       throw new Error(data.message || "Something went wrong");
@@ -24,7 +22,6 @@ const apiCall = async (endpoint, options = {}) => {
 
     return data;
   } catch (error) {
-    console.error("API Call error:", error);
     throw error;
   }
 };
@@ -44,6 +41,22 @@ export const readerAPI = {
     return apiCall("/readers/login", {
       method: "POST",
       body: JSON.stringify(credentials),
+    });
+  },
+
+  // Verify login OTP
+  verifyLoginOTP: async (email, otp) => {
+    return apiCall("/readers/verify-login-otp", {
+      method: "POST",
+      body: JSON.stringify({ email, otp }),
+    });
+  },
+
+  // Verify registration OTP
+  verifyRegisterOTP: async (email, otp) => {
+    return apiCall("/readers/verify-register-otp", {
+      method: "POST",
+      body: JSON.stringify({ email, otp }),
     });
   },
 
@@ -145,36 +158,13 @@ export const authorAPI = {
 export const reviewAPI = {
   // Add or update review
   addReview: async (token, reviewData) => {
-    console.log("=== reviewAPI.addReview ===");
-    console.log("Token:", token ? token.substring(0, 20) + "..." : "MISSING");
-    console.log("reviewData:", reviewData);
-    console.log("reviewData type:", typeof reviewData);
-    console.log("reviewData.bookId:", reviewData?.bookId);
-    console.log("reviewData.rating:", reviewData?.rating);
-    
-    try {
-      const response = await fetch(`${API_BASE_URL}/reviews`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`,
-        },
-        body: JSON.stringify(reviewData),
-      });
-
-      console.log("Fetch response status:", response.status);
-      const data = await response.json();
-      console.log("Fetch response data:", data);
-
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to submit review");
-      }
-
-      return data;
-    } catch (error) {
-      console.error("addReview API error:", error);
-      throw error;
-    }
+    return apiCall("/reviews", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(reviewData),
+    });
   },
 
   // Get reviews by book ID

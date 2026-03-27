@@ -1,11 +1,12 @@
 import { useParams, Link } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { getBookById, mockBooks } from "../data/mockBooks";
+import { getBookById, mockBooks, getIdFromSlug, generateSlug } from "../data/mockBooks";
 import ReviewSection from "../components/ReviewSection";
 import "./Pages.css";
 
 export default function BookDetails() {
-  const { id } = useParams();
+  const { slug } = useParams();
+  const id = getIdFromSlug(slug);
   const book = getBookById(id);
   
   const [selectedThumbnail, setSelectedThumbnail] = useState(0);
@@ -263,7 +264,7 @@ export default function BookDetails() {
             <h3>Related Books</h3>
             <div className="thuprai-related-grid">
               {relatedBooks.map((relatedBook) => (
-                <Link key={relatedBook.id} to={`/book/${relatedBook.id}`} className="thuprai-related-card">
+                <Link key={relatedBook.id} to={`/book/${generateSlug(relatedBook.title, relatedBook.id)}`} className="thuprai-related-card">
                   {getPlaceholderCover(relatedBook, 'medium')}
                   <div className="related-book-info">
                     <div className="related-book-title">{relatedBook.title}</div>

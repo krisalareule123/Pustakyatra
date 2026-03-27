@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { mockBooks } from "../data/mockBooks";
+import { mockBooks, generateSlug } from "../data/mockBooks";
 import "./Home.css";
 
 const categories = [
@@ -19,7 +19,7 @@ function CoverCard({ book, badge }) {
     .join("");
 
   return (
-    <Link to={`/book/${book.id}`} className="coverCard" title={book.title}>
+    <Link to={`/book/${generateSlug(book.title, book.id)}`} className="coverCard" title={book.title}>
       <div className="coverTop">
         <div className="coverBadge">{badge || initials}</div>
         <div className="coverPattern">

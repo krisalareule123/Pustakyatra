@@ -176,14 +176,31 @@ export default function MyAccount() {
     e.preventDefault();
     setMessage({ type: "", text: "" });
 
-    // Validation
     if (!passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
       setMessage({ type: "error", text: "Please fill in all password fields" });
       return;
     }
 
-    if (passwordForm.newPassword.length < 6) {
-      setMessage({ type: "error", text: "New password must be at least 6 characters long" });
+    // Strong password validation
+    const pwd = passwordForm.newPassword;
+    if (pwd.length < 8) {
+      setMessage({ type: "error", text: "New password must be at least 8 characters." });
+      return;
+    }
+    if (!/[A-Z]/.test(pwd)) {
+      setMessage({ type: "error", text: "New password must include at least one uppercase letter." });
+      return;
+    }
+    if (!/[a-z]/.test(pwd)) {
+      setMessage({ type: "error", text: "New password must include at least one lowercase letter." });
+      return;
+    }
+    if (!/[0-9]/.test(pwd)) {
+      setMessage({ type: "error", text: "New password must include at least one number." });
+      return;
+    }
+    if (!/[^A-Za-z0-9]/.test(pwd)) {
+      setMessage({ type: "error", text: "New password must include at least one special character (e.g. @, #, !)." });
       return;
     }
 
@@ -445,7 +462,7 @@ export default function MyAccount() {
                           <label>New Password <span className="required">*</span></label>
                           <input
                             type="password"
-                            placeholder="Minimum 6 characters"
+                            placeholder="Min 8 chars, uppercase, number, special char"
                             value={passwordForm.newPassword}
                             onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
                             required
