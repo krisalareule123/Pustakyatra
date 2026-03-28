@@ -8,6 +8,9 @@ import Home from "./pages/Home.jsx";
 import Register from "./pages/Register.jsx";
 import Login from "./pages/Login.jsx";
 import ForgotPassword from "./pages/ForgotPassword.jsx";
+import Payment from "./pages/Payment.jsx";
+import PaymentSuccess from "./pages/PaymentSuccess.jsx";
+import PaymentFailure from "./pages/PaymentFailure.jsx";
 
 import Browse from "./pages/Browse";
 import Categories from "./pages/Categories";
@@ -64,6 +67,9 @@ export default function App() {
               <Route path="/about" element={<About />} />
               <Route path="/book/:slug" element={<BookDetails />} />
               <Route path="/dashboard" element={<UserDashboard />} />
+              <Route path="/payment" element={<Payment />} />
+              <Route path="/payment/success" element={<PaymentSuccess />} />
+              <Route path="/payment/failure" element={<PaymentFailure />} />
             </Routes>
             <Footer />
           </>

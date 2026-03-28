@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { getBookById } from "../../data/mockBooks";
 import "../../pages/Pages.css";
 
 export default function CartPanel() {
+  const navigate = useNavigate();
   const [showCartPanel, setShowCartPanel] = useState(false);
   const [cartItems, setCartItems] = useState([]);
 
@@ -63,6 +65,17 @@ export default function CartPanel() {
 
   const getCartTotal = () => {
     return cartItems.reduce((total, item) => total + item.totalPrice, 0);
+  };
+
+  const handlePlaceOrder = () => {
+    const token = localStorage.getItem("token") || localStorage.getItem("authToken");
+    if (!token) {
+      navigate("/login");
+      return;
+    }
+    const total = getCartTotal();
+    setShowCartPanel(false);
+    navigate("/payment", { state: { items: cartItems, totalAmount: total } });
   };
 
   const handleCloseCart = () => {
@@ -146,7 +159,7 @@ export default function CartPanel() {
                   <span>TOTAL</span>
                   <span className="cart-total-amount">Rs {getCartTotal().toFixed(2)}</span>
                 </div>
-                <button className="cart-place-order-btn">PLACE ORDER</button>
+                <button className="cart-place-order-btn" onClick={handlePlaceOrder}>PLACE ORDER</button>
               </div>
             </>
           )}

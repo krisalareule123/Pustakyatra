@@ -3,6 +3,7 @@ const cors = require("cors");
 const dotenv = require("dotenv");
 const readerRoutes = require("./routes/reader.routes");
 const reviewRoutes = require("./routes/review.routes");
+const orderRoutes = require("./routes/order.routes");
 
 dotenv.config();
 
@@ -15,6 +16,7 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use("/api/readers", readerRoutes);
 app.use("/api/reviews", reviewRoutes);
+app.use("/api/orders", orderRoutes);
 
 app.get("/", (req, res) => {
   res.json({

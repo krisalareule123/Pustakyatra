@@ -1,4 +1,4 @@
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { getBookById, mockBooks, getIdFromSlug, generateSlug } from "../data/mockBooks";
 import ReviewSection from "../components/ReviewSection";
@@ -6,6 +6,7 @@ import "./Pages.css";
 
 export default function BookDetails() {
   const { slug } = useParams();
+  const navigate = useNavigate();
   const id = getIdFromSlug(slug);
   const book = getBookById(id);
   
@@ -75,6 +76,25 @@ export default function BookDetails() {
   const getCartTotal = () => {
     const cart = JSON.parse(localStorage.getItem('cart') || '[]');
     return cart.reduce((total, item) => total + item.totalPrice, 0);
+  };
+
+  const handlePayNow = (type) => {
+    const token = localStorage.getItem("token") || localStorage.getItem("authToken");
+    if (!token) {
+      navigate("/login");
+      return;
+    }
+    const item = {
+      bookId: book.id,
+      title: book.title,
+      author: book.author,
+      type,
+      quantity: type === "buy" ? buyQuantity : rentQuantity,
+      price: type === "buy" ? book.buyPrice : book.rentPrice,
+      totalPrice: type === "buy" ? book.buyPrice * buyQuantity : book.rentPrice * rentQuantity,
+      rentDays: type === "rent" ? book.rentDays : null,
+    };
+    navigate("/payment", { state: { items: [item], totalAmount: item.totalPrice } });
   };
 
   const handleCloseCart = () => {
@@ -205,7 +225,7 @@ export default function BookDetails() {
                       </div>
                     </>
                   ) : (
-                    <button className="thuprai-btn-pay">Pay now</button>
+                    <button className="thuprai-btn-pay" onClick={() => handlePayNow('buy')}>Pay now</button>
                   )}
                 </div>
 
@@ -229,7 +249,7 @@ export default function BookDetails() {
                       </div>
                     </>
                   ) : (
-                    <button className="thuprai-btn-pay">Rent now</button>
+                    <button className="thuprai-btn-pay" onClick={() => handlePayNow('rent')}>Rent now</button>
                   )}
                 </div>
               </div>

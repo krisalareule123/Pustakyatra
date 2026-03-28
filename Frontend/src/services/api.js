@@ -195,4 +195,61 @@ export const reviewAPI = {
   },
 };
 
-export default { readerAPI, authorAPI, reviewAPI };
+// Order APIs
+export const orderAPI = {
+  createOrder: async (token, orderData) => {
+    return apiCall("/orders", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify(orderData),
+    });
+  },
+
+  initiateEsewa: async (token, orderId, totalAmount, items) => {
+    return apiCall("/orders/initiate-esewa", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ orderId, totalAmount, items }),
+    });
+  },
+
+  verifyEsewa: async (token, encodedData) => {
+    return apiCall("/orders/verify-esewa", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ encodedData }),
+    });
+  },
+
+  failOrder: async (token, orderId, reason) => {
+    return apiCall("/orders/fail", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ orderId, reason }),
+    });
+  },
+
+  submitPayment: async (token, orderId) => {
+    return apiCall("/orders/submit-payment", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ orderId }),
+    });
+  },
+
+  getOrder: async (token, orderId) => {
+    return apiCall(`/orders/${orderId}`, {
+      method: "GET",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  },
+
+  getMyOrders: async (token) => {
+    return apiCall("/orders/my-orders", {
+      method: "GET",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  },
+};
+
+export default { readerAPI, authorAPI, reviewAPI, orderAPI };
