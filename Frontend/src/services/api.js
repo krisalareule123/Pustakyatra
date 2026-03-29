@@ -244,10 +244,32 @@ export const orderAPI = {
     });
   },
 
-  getMyOrders: async (token) => {
-    return apiCall("/orders/my-orders", {
+  getMyOrders: async (token, status = "all") => {
+    const params = status && status !== "all" ? `?status=${status}` : "";
+    return apiCall(`/orders/my-orders${params}`, {
       method: "GET",
       headers: { Authorization: `Bearer ${token}` },
+    });
+  },
+
+  getLibrary: async (token) => {
+    return apiCall("/orders/library", {
+      method: "GET",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  },
+
+  // Admin
+  adminGetOrders: async (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return apiCall(`/orders/admin/orders${query ? `?${query}` : ""}`, {
+      method: "GET",
+    });
+  },
+
+  adminGetOrder: async (orderId) => {
+    return apiCall(`/orders/admin/orders/${orderId}`, {
+      method: "GET",
     });
   },
 };

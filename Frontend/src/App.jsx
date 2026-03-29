@@ -11,6 +11,7 @@ import ForgotPassword from "./pages/ForgotPassword.jsx";
 import Payment from "./pages/Payment.jsx";
 import PaymentSuccess from "./pages/PaymentSuccess.jsx";
 import PaymentFailure from "./pages/PaymentFailure.jsx";
+import MyOrders from "./pages/MyOrders.jsx";
 
 import Browse from "./pages/Browse";
 import Categories from "./pages/Categories";
@@ -70,6 +71,7 @@ export default function App() {
               <Route path="/payment" element={<Payment />} />
               <Route path="/payment/success" element={<PaymentSuccess />} />
               <Route path="/payment/failure" element={<PaymentFailure />} />
+              <Route path="/my-orders" element={<MyOrders />} />
             </Routes>
             <Footer />
           </>

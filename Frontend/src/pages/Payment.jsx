@@ -79,6 +79,13 @@ export default function Payment() {
 
       const { paymentData, paymentUrl } = response;
 
+      // Debug: log full payload before submitting to eSewa
+      console.log("=== eSewa Form Submit Debug ===");
+      console.log("Payment URL:", paymentUrl);
+      console.log("Payload:", paymentData);
+      console.log("All fields present:", Object.entries(paymentData).map(([k,v]) => `${k}=${v}`).join(" | "));
+      console.log("===============================");
+
       // Build and submit a hidden form — page will navigate away
       const form = document.createElement("form");
       form.method = "POST";

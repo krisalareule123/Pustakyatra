@@ -419,6 +419,60 @@
   }
 }
 
+/* Success items list */
+.success-items {
+  width: 100%;
+  max-width: 380px;
+  margin: 0 0 20px;
+  text-align: left;
+}
+
+.success-items-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #6c757d;
+  margin: 0 0 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.success-item-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #f0f0f0;
+  gap: 12px;
+}
+
+.success-item-row:last-child {
+  border-bottom: none;
+}
+
+.success-item-title {
+  font-size: 14px;
+  color: #1a2912;
+  font-weight: 500;
+  flex: 1;
+}
+
+.success-item-access {
+  font-size: 12px;
+  color: #155724;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.success-support-note {
+  font-size: 13px;
+  color: #6c757d;
+  font-style: italic;
+}
+
+.failure-status-text {
+  color: #721c24 !important;
+}
+
 /* eSewa Pay Button */
 .btn-esewa-pay {
   width: 100%;
@@ -476,4 +530,58 @@
 .payment-retry-btn:hover {
   background: #721c24;
   color: white;
+}
+
+/* Success details box */
+.success-details {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 10px;
+  padding: 20px 24px;
+  margin: 20px 0 28px;
+  width: 100%;
+  max-width: 380px;
+  text-align: left;
+}
+
+.success-detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #e9ecef;
+  font-size: 14px;
+}
+
+.success-detail-row:last-child {
+  border-bottom: none;
+}
+
+.success-detail-row span {
+  color: #6c757d;
+}
+
+.success-detail-row strong {
+  color: #1a2912;
+}
+
+.success-status-text {
+  color: #155724 !important;
+}
+
+/* Success action buttons */
+.success-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.btn-secondary-action {
+  background: #6c757d !important;
+}
+
+.btn-secondary-action:hover {
+  background: #5a6268 !important;
 }
