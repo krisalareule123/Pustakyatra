@@ -94,10 +94,18 @@ export default function Browse() {
           {books.map((book, i) => (
             <Link key={book.book_id} to={`/book/${book.book_id}`} className="book-card">
               <div className="book-cover">
-                <div className="cover-placeholder" style={{ background: COLORS[i % COLORS.length] }}>
-                  <div className="cover-pattern"></div>
-                  <span className="cover-initials">{initials(book.title)}</span>
-                </div>
+                {book.cover_image ? (
+                  <img
+                    src={`http://localhost:5001/${book.cover_image}`}
+                    alt={book.title}
+                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                  />
+                ) : (
+                  <div className="cover-placeholder" style={{ background: COLORS[i % COLORS.length] }}>
+                    <div className="cover-pattern"></div>
+                    <span className="cover-initials">{initials(book.title)}</span>
+                  </div>
+                )}
                 {book.category && <div className="book-badge">{book.category}</div>}
               </div>
               <div className="book-info">

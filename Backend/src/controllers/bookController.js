@@ -5,7 +5,13 @@ const fs = require("fs");
 // Create / upload a new book (author only — author_id from JWT)
 const createBook = (req, res) => {
   try {
-    const authorId = req.user.author_id; // from authAuthor middleware
+    const authorId = req.user.author_id;
+
+    // Debug: log what multer received
+    console.log("createBook — req.files:", JSON.stringify({
+      coverImage: req.files?.coverImage?.map(f => ({ name: f.originalname, size: f.size, dest: f.destination })),
+      bookFile:   req.files?.bookFile?.map(f => ({ name: f.originalname, size: f.size, dest: f.destination })),
+    }));
 
     const {
       title, nepaliTitle, description, category,
@@ -25,6 +31,8 @@ const createBook = (req, res) => {
     const pdfFile = req.files?.bookFile?.[0]?.filename
       ? `uploads/pdfs/${req.files.bookFile[0].filename}`
       : null;
+
+    console.log("Saving — coverImage:", coverImage, "| pdfFile:", pdfFile);
 
     const query = `
       INSERT INTO books

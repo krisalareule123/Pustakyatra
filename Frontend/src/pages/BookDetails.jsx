@@ -130,19 +130,28 @@ export default function BookDetails() {
         <div className="thuprai-book-layout">
           {/* Cover */}
           <div className="thuprai-book-cover">
-            <div className="book-placeholder-cover" style={{
-              background: COLORS[colorIdx], width: "100%", height: "450px",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              color: "white", fontSize: "48px", fontWeight: "700",
-              borderRadius: "8px", position: "relative", overflow: "hidden"
-            }}>
-              <div style={{ position: "absolute", bottom: 10, left: 10, right: 10,
-                background: "rgba(255,255,255,0.1)", borderRadius: 6, padding: "8px",
-                fontSize: 14, textAlign: "center" }}>
-                {book.nepali_title || book.title}
+            {book.cover_image ? (
+              <img
+                src={`http://localhost:5001/${book.cover_image}`}
+                alt={book.title}
+                style={{ width: "100%", height: "450px", objectFit: "cover",
+                  borderRadius: "8px", display: "block" }}
+              />
+            ) : (
+              <div className="book-placeholder-cover" style={{
+                background: COLORS[colorIdx], width: "100%", height: "450px",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                color: "white", fontSize: "48px", fontWeight: "700",
+                borderRadius: "8px", position: "relative", overflow: "hidden"
+              }}>
+                <div style={{ position: "absolute", bottom: 10, left: 10, right: 10,
+                  background: "rgba(255,255,255,0.1)", borderRadius: 6, padding: "8px",
+                  fontSize: 14, textAlign: "center" }}>
+                  {book.nepali_title || book.title}
+                </div>
+                <span style={{ zIndex: 2 }}>{initials(book.title)}</span>
               </div>
-              <span style={{ zIndex: 2 }}>{initials(book.title)}</span>
-            </div>
+            )}
             {book.category && (
               <div className="thuprai-tags">
                 <span className="thuprai-tag">{book.category}</span>

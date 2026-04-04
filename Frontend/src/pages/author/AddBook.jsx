@@ -13,6 +13,8 @@ export default function AddBook() {
     rentDays: "15", coverImage: null, bookFile: null
   });
 
+  const [coverPreview, setCoverPreview] = useState(null);
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setBookData(prev => ({ ...prev, [name]: value }));
@@ -20,7 +22,13 @@ export default function AddBook() {
 
   const handleFileChange = (e) => {
     const { name, files } = e.target;
-    if (files?.[0]) setBookData(prev => ({ ...prev, [name]: files[0] }));
+    if (files?.[0]) {
+      setBookData(prev => ({ ...prev, [name]: files[0] }));
+      // Show cover preview
+      if (name === "coverImage") {
+        setCoverPreview(URL.createObjectURL(files[0]));
+      }
+    }
   };
 
   const handleSubmit = async (e, forcedStatus) => {
@@ -67,6 +75,7 @@ export default function AddBook() {
           language: "Nepali", keywords: "", buyPrice: "", rentPrice: "",
           rentDays: "15", coverImage: null, bookFile: null
         });
+        setCoverPreview(null);
         setTimeout(() => navigate("/author/books"), 1500);
       } else {
         setSubmitMsg({ type: "error", text: data.message || "Failed to publish book." });
@@ -187,12 +196,27 @@ export default function AddBook() {
               <label htmlFor="coverImage">Cover Image</label>
               <input type="file" id="coverImage" name="coverImage"
                 onChange={handleFileChange} className="form-control-file" accept="image/*" />
+              {coverPreview && (
+                <img src={coverPreview} alt="Cover preview"
+                  style={{ marginTop: 8, width: 80, height: 110, objectFit: "cover",
+                    borderRadius: 6, border: "1px solid #ddd" }} />
+              )}
+              {bookData.coverImage && !coverPreview && (
+                <small style={{ color: "#3b5723", display: "block", marginTop: 4 }}>
+                  ✓ {bookData.coverImage.name}
+                </small>
+              )}
               <small className="form-hint">JPG, PNG. Max 2MB. Recommended: 600x900px</small>
             </div>
             <div className="form-field">
               <label htmlFor="bookFile">Book PDF *</label>
               <input type="file" id="bookFile" name="bookFile"
                 onChange={handleFileChange} className="form-control-file" accept=".pdf" required />
+              {bookData.bookFile && (
+                <small style={{ color: "#3b5723", display: "block", marginTop: 4 }}>
+                  ✓ {bookData.bookFile.name} ({(bookData.bookFile.size / 1024 / 1024).toFixed(1)} MB)
+                </small>
+              )}
               <small className="form-hint">PDF only. Max 50MB</small>
             </div>
           </div>
