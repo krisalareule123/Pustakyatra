@@ -22,8 +22,10 @@ export default function Login() {
     const token = localStorage.getItem('token') || localStorage.getItem('authToken');
     const userData = localStorage.getItem('userData');
     if (token && userData) {
-      const user = JSON.parse(userData);
-      navigate(user.role === 'author' ? '/author/dashboard' : '/dashboard');
+      try {
+        const user = JSON.parse(userData);
+        navigate(user.role === 'author' ? '/author/dashboard' : '/', { replace: true });
+      } catch { navigate('/', { replace: true }); }
     }
   }, [navigate]);
 

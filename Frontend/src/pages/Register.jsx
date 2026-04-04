@@ -5,6 +5,18 @@ import "./Register.css";
 
 export default function Register() {
   const navigate = useNavigate();
+
+  // Redirect if already logged in
+  useEffect(() => {
+    const token = localStorage.getItem("token") || localStorage.getItem("authToken");
+    const userData = localStorage.getItem("userData");
+    if (token && userData) {
+      try {
+        const user = JSON.parse(userData);
+        navigate(user.role === "author" ? "/author/dashboard" : "/", { replace: true });
+      } catch { navigate("/", { replace: true }); }
+    }
+  }, [navigate]);
   const [role, setRole] = useState("reader");
   const [step, setStep] = useState("form"); // "form" | "otp"
   const [form, setForm] = useState({ fullName: "", email: "", password: "", confirmPassword: "" });
