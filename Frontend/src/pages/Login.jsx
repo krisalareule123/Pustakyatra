@@ -54,25 +54,28 @@ export default function Login() {
       if (role === "author") {
         const response = await authorAPI.login(credentials);
         if (response.requiresOTP) {
-          // Author not verified — backend sent new OTP
           setStep("otp");
           setResendTimer(60);
         } else {
-          // Verified author — save with author-specific keys
           localStorage.setItem("authorToken", response.token);
           localStorage.setItem("authorData", JSON.stringify(response.author));
           navigate("/author/dashboard");
         }
       } else {
-        // Reader: request OTP
+        // Reader: direct login — no OTP
         const response = await readerAPI.login(credentials);
-        console.log("Login response:", response);
         if (response.requiresOTP) {
+          // Unverified account — needs email verification OTP
           setStep("otp");
           setResendTimer(60);
+        } else if (response.token) {
+          localStorage.setItem("token", response.token);
+          localStorage.setItem("authToken", response.token);
+          localStorage.setItem("userData", JSON.stringify({ ...response.user, role: "reader" }));
+          window.dispatchEvent(new Event("userLoggedIn"));
+          navigate("/");
         } else {
-          // Unexpected: backend returned success but no OTP flag
-          setError("Unexpected response from server. Please try again.");
+          setError("Unexpected response. Please try again.");
         }
       }
     } catch (err) {
@@ -131,11 +134,11 @@ export default function Login() {
       <div className="loginContainer">
         <div className="loginHeader">
           <h1 className="loginTitle">
-            {step === "otp" ? "Verify Your Identity" : "Welcome Back"}
+            {step === "otp" ? "Verify Your Email" : "Welcome Back"}
           </h1>
           <p className="loginSub">
             {step === "otp"
-              ? `We sent a 6-digit code to ${email}`
+              ? `Enter the 6-digit code sent to ${email} to activate your account`
               : "Continue your reading journey with Pustakyatra's digital library"}
           </p>
         </div>

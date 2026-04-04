@@ -74,10 +74,14 @@ const registerReader = async (req, res) => {
 
         console.log("✅ Reader registered. Sending verification OTP to:", email);
 
-        // Send OTP email (non-blocking)
-        sendOTPEmail(email, fullName, otp).catch((e) =>
-          console.error("Email sending failed:", e.message)
-        );
+        // Send OTP email — await so we can log failures clearly
+        try {
+          await sendOTPEmail(email, fullName, otp);
+          console.log("✅ OTP email sent to:", email);
+        } catch (emailErr) {
+          console.error("❌ OTP email failed:", emailErr.message);
+          // Don't block registration — user can resend OTP
+        }
 
         res.status(201).json({
           success: true,
@@ -158,91 +162,65 @@ const loginReader = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    console.log("🔐 Login attempt for:", email);
-
     if (!email || !password) {
-      return res.status(400).json({
-        success: false,
-        message: "Please provide email and password"
-      });
+      return res.status(400).json({ success: false, message: "Please provide email and password" });
     }
 
     const query = "SELECT * FROM readers WHERE email = ?";
     db.query(query, [email], async (err, results) => {
       if (err) {
         console.error("Database error:", err);
-        return res.status(500).json({
-          success: false,
-          message: "Server error. Please try again later"
-        });
+        return res.status(500).json({ success: false, message: "Server error. Please try again later" });
       }
 
       if (results.length === 0) {
-        return res.status(404).json({
-          success: false,
-          message: "Account not found. Please create an account first."
-        });
+        return res.status(404).json({ success: false, message: "Account not found. Please create an account first." });
       }
 
       const user = results[0];
       const isPasswordValid = await bcrypt.compare(password, user.password);
 
       if (!isPasswordValid) {
-        return res.status(401).json({
+        return res.status(401).json({ success: false, message: "Incorrect password. Please try again." });
+      }
+
+      if (!user.is_verified) {
+        // Resend registration OTP so they can verify
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        db.query(
+          "UPDATE readers SET otp_code = ?, otp_expiry = DATE_ADD(NOW(), INTERVAL 10 MINUTE) WHERE email = ?",
+          [otp, email],
+          () => sendOTPEmail(email, user.full_name, otp).catch(e => console.error("OTP email failed:", e.message))
+        );
+        return res.status(403).json({
           success: false,
-          message: "Incorrect password. Please try again."
+          requiresOTP: true,
+          message: "Please verify your email before logging in. A new OTP has been sent.",
+          email: email
         });
       }
 
-      // ✅ Credentials valid — generate OTP, do NOT issue JWT yet
-      const otp = Math.floor(100000 + Math.random() * 900000).toString();
-      console.log("✅ Credentials valid. Generating login OTP for:", email);
+      // Verified — issue JWT directly, no OTP needed
+      const token = jwt.sign(
+        { reader_id: user.reader_id, email: user.email },
+        process.env.JWT_SECRET,
+        { expiresIn: "7d" }
+      );
 
-      const updateQuery = `
-        UPDATE readers
-        SET otp_code = ?, otp_expiry = DATE_ADD(NOW(), INTERVAL 10 MINUTE)
-        WHERE email = ?
-      `;
-
-      db.query(updateQuery, [otp, email], async (err) => {
-        if (err) {
-          console.error("Database error saving OTP:", err);
-          return res.status(500).json({
-            success: false,
-            message: "Server error. Please try again later"
-          });
+      res.status(200).json({
+        success: true,
+        message: "Login successful! Welcome back.",
+        token,
+        user: {
+          reader_id: user.reader_id,
+          fullName: user.full_name,
+          email: user.email
         }
-
-        console.log("✅ OTP saved to DB. Sending email...");
-
-        // Send login OTP email
-        const emailResult = await sendLoginOTPEmail(email, user.full_name, otp);
-
-        if (!emailResult.success) {
-          console.error("❌ Failed to send OTP email:", emailResult.error);
-          // Still return requiresOTP so user can proceed (dev fallback)
-          // In production you may want to block here
-        }
-
-        console.log("✅ Login OTP flow complete. Returning requiresOTP: true");
-
-        // ✅ Return OTP required — no token here
-        res.status(200).json({
-          success: true,
-          requiresOTP: true,
-          message: emailResult.success
-            ? "OTP sent to your email. Please verify to complete login."
-            : "OTP generated. Check your email (or server logs for dev).",
-          email: email
-        });
       });
     });
   } catch (error) {
     console.error("Login error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Server error. Please try again later"
-    });
+    res.status(500).json({ success: false, message: "Server error. Please try again later" });
   }
 };
 
