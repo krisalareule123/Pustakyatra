@@ -1,0 +1,12 @@
+CREATE TABLE IF NOT EXISTS authors (
+  author_id   INT PRIMARY KEY AUTO_INCREMENT,
+  full_name   VARCHAR(150) NOT NULL,
+  email       VARCHAR(150) NOT NULL UNIQUE,
+  password    VARCHAR(255) NOT NULL,
+  phone       VARCHAR(20) NULL,
+  bio         TEXT NULL,
+  otp_code    VARCHAR(10) NULL,
+  otp_expiry  DATETIME NULL,
+  is_verified TINYINT(1) NOT NULL DEFAULT 0,
+  created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

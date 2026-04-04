@@ -5,10 +5,16 @@ export default function AuthorSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
 
+  const authorData = (() => {
+    try { return JSON.parse(localStorage.getItem("authorData") || "{}"); } catch { return {}; }
+  })();
+  const authorName = authorData.fullName || "Author";
+  const authorInitial = authorName.charAt(0).toUpperCase();
+
   const handleLogout = () => {
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('userData');
-    navigate('/');
+    localStorage.removeItem("authorToken");
+    localStorage.removeItem("authorData");
+    navigate("/");
   };
 
   const menuItems = [
@@ -31,12 +37,21 @@ export default function AuthorSidebar() {
         </div>
       </div>
 
+      {/* Author identity */}
+      <div className="author-identity">
+        <div className="author-identity-avatar">{authorInitial}</div>
+        <div className="author-identity-info">
+          <div className="author-identity-name">{authorName}</div>
+          <div className="author-identity-role">Author</div>
+        </div>
+      </div>
+
       <nav className="author-sidebar-nav">
         {menuItems.map((item) => (
           <Link
             key={item.path}
             to={item.path}
-            className={`author-nav-item ${location.pathname === item.path ? 'active' : ''}`}
+            className={`author-nav-item ${location.pathname === item.path ? "active" : ""}`}
           >
             <span className="author-nav-icon">{item.icon}</span>
             <span className="author-nav-label">{item.label}</span>

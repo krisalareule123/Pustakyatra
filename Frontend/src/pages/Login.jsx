@@ -13,6 +13,8 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [resendTimer, setResendTimer] = useState(0);
 
+  const [showPassword, setShowPassword] = useState(false);
+
   const navigate = useNavigate();
 
   // Redirect if already logged in
@@ -48,13 +50,17 @@ export default function Login() {
       const credentials = { email: email.trim(), password };
 
       if (role === "author") {
-        // Authors don't use OTP flow yet — direct login
         const response = await authorAPI.login(credentials);
-        localStorage.setItem('token', response.token);
-        localStorage.setItem('authToken', response.token);
-        localStorage.setItem('userData', JSON.stringify({ ...response.user, role: "author" }));
-        window.dispatchEvent(new Event('userLoggedIn'));
-        navigate("/author/dashboard");
+        if (response.requiresOTP) {
+          // Author not verified — backend sent new OTP
+          setStep("otp");
+          setResendTimer(60);
+        } else {
+          // Verified author — save with author-specific keys
+          localStorage.setItem("authorToken", response.token);
+          localStorage.setItem("authorData", JSON.stringify(response.author));
+          navigate("/author/dashboard");
+        }
       } else {
         // Reader: request OTP
         const response = await readerAPI.login(credentials);
@@ -86,13 +92,19 @@ export default function Login() {
 
     setLoading(true);
     try {
-      const response = await readerAPI.verifyLoginOTP(email, otp.trim());
-
-      localStorage.setItem('token', response.token);
-      localStorage.setItem('authToken', response.token);
-      localStorage.setItem('userData', JSON.stringify({ ...response.user, role: "reader" }));
-      window.dispatchEvent(new Event('userLoggedIn'));
-      navigate("/dashboard");
+      if (role === "author") {
+        const response = await authorAPI.verifyEmail(email, otp.trim());
+        localStorage.setItem("authorToken", response.token);
+        localStorage.setItem("authorData", JSON.stringify(response.author));
+        navigate("/author/dashboard");
+      } else {
+        const response = await readerAPI.verifyLoginOTP(email, otp.trim());
+        localStorage.setItem("token", response.token);
+        localStorage.setItem("authToken", response.token);
+        localStorage.setItem("userData", JSON.stringify({ ...response.user, role: "reader" }));
+        window.dispatchEvent(new Event("userLoggedIn"));
+        navigate("/dashboard");
+      }
     } catch (err) {
       setError(err.message || "Invalid OTP. Please try again.");
     } finally {
@@ -142,8 +154,31 @@ export default function Login() {
                 </div>
                 <div>
                   <label>Password</label>
-                  <input type="password" value={password} onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter your password" required disabled={loading} />
+                  <div style={{ position: "relative" }}>
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Enter your password"
+                      required
+                      disabled={loading}
+                      style={{ paddingRight: 44 }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(p => !p)}
+                      style={{
+                        position: "absolute", right: 12, top: "50%",
+                        transform: "translateY(-50%)", background: "none",
+                        border: "none", cursor: "pointer", color: "#888",
+                        fontSize: 16, padding: 0, lineHeight: 1
+                      }}
+                      tabIndex={-1}
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                    >
+                      {showPassword ? "🙈" : "👁"}
+                    </button>
+                  </div>
                 </div>
 
                 {error && <div className="loginError">{error}</div>}

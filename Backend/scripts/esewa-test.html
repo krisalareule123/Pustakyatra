@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head><title>eSewa Test Form</title></head>
+<body>
+  <h2>eSewa Sandbox Test</h2>
+  <p>Click the button to POST directly to eSewa sandbox.</p>
+  <p><strong>Note:</strong> success_url and failure_url must be publicly accessible (not localhost) for eSewa to redirect back.</p>
+
+  <form method="POST" action="https://rc-epay.esewa.com.np/api/epay/main/v2/form">
+    <input type="hidden" name="amount"                    value="100.00">
+    <input type="hidden" name="tax_amount"                value="0">
+    <input type="hidden" name="product_service_charge"    value="0">
+    <input type="hidden" name="product_delivery_charge"   value="0">
+    <input type="hidden" name="product_code"              value="EPAYTEST">
+    <input type="hidden" name="total_amount"              value="100.00">
+    <input type="hidden" name="transaction_uuid"          id="uuid">
+    <input type="hidden" name="success_url"               value="http://localhost:5173/payment/success">
+    <input type="hidden" name="failure_url"               value="http://localhost:5173/payment/failure?reason=failed">
+    <input type="hidden" name="signed_field_names"        value="total_amount,transaction_uuid,product_code">
+    <input type="hidden" name="signature"                 id="sig">
+    <button type="submit" style="padding:12px 24px;background:#60bb46;color:white;border:none;border-radius:8px;font-size:16px;cursor:pointer">
+      Pay Rs 100 with eSewa
+    </button>
+  </form>
+
+  <p style="margin-top:20px;color:#666;font-size:13px">
+    eSewa sandbox test credentials:<br>
+    eSewa ID: 9806800001 / 9806800002 / 9806800003 / 9806800004 / 9806800005<br>
+    Password: Nepal@123<br>
+    MPIN: 1122
+  </p>
+
+  <script>
+    // Generate a unique transaction UUID on page load
+    document.getElementById('uuid').value = 'PK999T' + Date.now();
+    // NOTE: signature must be generated server-side with HMAC-SHA256
+    // This form is for testing only — in production the signature comes from your backend
+    document.getElementById('sig').value = '-- replace with backend-generated signature --';
+  </script>
+</body>
+</html>

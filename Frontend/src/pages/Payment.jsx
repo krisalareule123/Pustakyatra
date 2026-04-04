@@ -109,6 +109,29 @@ export default function Payment() {
     }
   };
 
+  // Simulate payment — bypasses eSewa when sandbox is down (502/503)
+  const handleSimulatePayment = async () => {
+    if (!orderId || redirecting) return;
+    setRedirecting(true);
+    setError("");
+    try {
+      const token = localStorage.getItem("token") || localStorage.getItem("authToken");
+      const response = await orderAPI.simulatePayment(token, orderId);
+      if (response.success) {
+        localStorage.removeItem("cart");
+        window.dispatchEvent(new Event("cartUpdated"));
+        // Navigate to my-orders directly — no eSewa redirect needed
+        navigate("/my-orders");
+      } else {
+        setError(response.message || "Simulation failed.");
+        setRedirecting(false);
+      }
+    } catch (err) {
+      setError(err.message || "Simulation failed.");
+      setRedirecting(false);
+    }
+  };
+
   // Cancel: mark order as cancelled in DB, then go back
   const handleCancelOrder = async () => {
     if (orderId) {
@@ -174,6 +197,16 @@ export default function Payment() {
                   disabled={esewaLoading || redirecting || !orderId}
                 >
                   {redirecting ? "Redirecting to eSewa..." : "Pay with eSewa →"}
+                </button>
+
+                {/* Shown when eSewa sandbox is down — remove in production */}
+                <button
+                  className="btn-simulate-pay"
+                  onClick={handleSimulatePayment}
+                  disabled={redirecting || !orderId}
+                  title="Use this when eSewa sandbox is unavailable (502/503)"
+                >
+                  🧪 Simulate Payment (eSewa down)
                 </button>
               </div>
             </div>

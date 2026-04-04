@@ -1,294 +1,150 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+
+const API = "http://localhost:5001/api";
 
 export default function AuthorProfile() {
-  const [profile, setProfile] = useState({
-    name: "John Doe",
-    displayName: "J. Doe",
-    email: "john.doe@example.com",
-    bio: "Passionate writer with over 5 years of experience in fiction and non-fiction writing.",
-    profilePicture: null,
-    joinedDate: "January 15, 2023",
-    totalBooks: 5,
-    totalEarnings: 15420,
-    accountStatus: "Active"
-  });
+  const navigate = useNavigate();
+  const token = localStorage.getItem("authorToken");
 
-  const [passwords, setPasswords] = useState({
-    currentPassword: "",
-    newPassword: "",
-    confirmPassword: ""
-  });
+  const [profile, setProfile] = useState(null);
+  const [form, setForm] = useState({ fullName: "", phone: "", bio: "" });
+  const [stats, setStats] = useState({ totalBooks: 0, published: 0, totalEarnings: 0 });
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState({ type: "", text: "" });
 
-  const [previewImage, setPreviewImage] = useState(null);
+  useEffect(() => {
+    if (!token) { navigate("/login"); return; }
+    const h = { Authorization: `Bearer ${token}` };
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setProfile(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
+    Promise.all([
+      fetch(`${API}/authors/me`, { headers: h }).then(r => r.json()),
+      fetch(`${API}/authors/stats`, { headers: h }).then(r => r.json()),
+    ]).then(([profileRes, statsRes]) => {
+      if (profileRes.success) {
+        setProfile(profileRes.author);
+        setForm({
+          fullName: profileRes.author.fullName || "",
+          phone: profileRes.author.phone || "",
+          bio: profileRes.author.bio || "",
+        });
+      }
+      if (statsRes.success) setStats(statsRes.stats);
+    }).catch(console.error);
+  }, [token, navigate]);
 
-  const handlePasswordChange = (e) => {
-    const { name, value } = e.target;
-    setPasswords(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  const handleImageUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreviewImage(reader.result);
-      };
-      reader.readAsDataURL(file);
+  const handleSave = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    setMsg({ type: "", text: "" });
+    try {
+      const res = await fetch(`${API}/authors/me`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify(form),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setMsg({ type: "success", text: "Profile updated successfully." });
+        // Update localStorage
+        const stored = JSON.parse(localStorage.getItem("authorData") || "{}");
+        localStorage.setItem("authorData", JSON.stringify({ ...stored, fullName: form.fullName }));
+      } else {
+        setMsg({ type: "error", text: data.message || "Failed to update profile." });
+      }
+    } catch {
+      setMsg({ type: "error", text: "Could not connect to server." });
+    } finally {
+      setSaving(false);
     }
   };
 
-  const handleSaveProfile = (e) => {
-    e.preventDefault();
-    console.log("Profile saved:", profile);
-    alert("Profile updated successfully!");
-  };
-
-  const handleUpdatePassword = (e) => {
-    e.preventDefault();
-    if (passwords.newPassword !== passwords.confirmPassword) {
-      alert("New passwords do not match!");
-      return;
-    }
-    console.log("Password updated");
-    alert("Password updated successfully!");
-    setPasswords({
-      currentPassword: "",
-      newPassword: "",
-      confirmPassword: ""
-    });
-  };
+  if (!profile) return (
+    <div className="dashboard-workspace">
+      <p style={{ color: "#888", padding: 32 }}>Loading profile...</p>
+    </div>
+  );
 
   return (
     <div className="dashboard-workspace">
       <div className="dashboard-header">
         <div>
           <h1 className="dashboard-title">Profile & Settings</h1>
-          <div className="dashboard-date">Manage your account information and security</div>
+          <div className="dashboard-date">Manage your author account</div>
         </div>
       </div>
 
-      {/* Account Summary Cards */}
-      <div className="profile-summary-grid">
-        <div className="profile-summary-card">
-          <div className="summary-card-icon">📅</div>
-          <div className="summary-card-content">
-            <div className="summary-card-label">Member Since</div>
-            <div className="summary-card-value">{profile.joinedDate}</div>
-          </div>
+      {/* Identity card */}
+      <div className="profile-identity-card">
+        <div className="profile-identity-avatar">{profile.fullName?.charAt(0).toUpperCase()}</div>
+        <div className="profile-identity-info">
+          <div className="profile-identity-name">{profile.fullName}</div>
+          <div className="profile-identity-email">{profile.email}</div>
+          <div className="profile-identity-id">Author ID: #{profile.author_id}</div>
         </div>
-        <div className="profile-summary-card">
-          <div className="summary-card-icon">📚</div>
-          <div className="summary-card-content">
-            <div className="summary-card-label">Books Published</div>
-            <div className="summary-card-value">{profile.totalBooks}</div>
-          </div>
-        </div>
-        <div className="profile-summary-card">
-          <div className="summary-card-icon">💰</div>
-          <div className="summary-card-content">
-            <div className="summary-card-label">Total Earnings</div>
-            <div className="summary-card-value">Rs. {profile.totalEarnings.toLocaleString()}</div>
-          </div>
-        </div>
-        <div className="profile-summary-card">
-          <div className="summary-card-icon">✓</div>
-          <div className="summary-card-content">
-            <div className="summary-card-label">Account Status</div>
-            <div className="summary-card-value status-active">{profile.accountStatus}</div>
-          </div>
+        <div className="profile-identity-stats">
+          <div className="pid-stat"><span>{stats.totalBooks}</span>Books</div>
+          <div className="pid-stat"><span>{stats.published}</span>Published</div>
+          <div className="pid-stat"><span>Rs. {(stats.totalEarnings || 0).toLocaleString()}</span>Earnings</div>
         </div>
       </div>
 
-      {/* Profile Information Section */}
+      {/* Edit form */}
       <div className="profile-settings-section">
         <div className="settings-section-header">
-          <h2 className="settings-section-title">Profile Information</h2>
-          <p className="settings-section-subtitle">Update your author profile and public information</p>
+          <h2 className="settings-section-title">Edit Profile</h2>
         </div>
-        
-        <form onSubmit={handleSaveProfile} className="settings-form">
-          {/* Profile Picture Upload */}
-          <div className="profile-picture-upload-section">
-            <div className="profile-picture-preview">
-              {previewImage ? (
-                <img src={previewImage} alt="Profile" className="profile-picture-img" />
-              ) : (
-                <div className="profile-picture-placeholder-large">
-                  {profile.name.split(' ').map(word => word[0]).join('')}
-                </div>
-              )}
-            </div>
-            <div className="profile-picture-upload-info">
-              <h3 className="upload-info-title">Profile Picture</h3>
-              <p className="upload-info-text">Upload a professional photo. This will be visible to readers.</p>
-              <div className="upload-actions">
-                <label htmlFor="profile-picture-input" className="upload-btn">
-                  Choose File
-                </label>
-                <input
-                  type="file"
-                  id="profile-picture-input"
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  style={{ display: 'none' }}
-                />
-                {previewImage && (
-                  <button
-                    type="button"
-                    className="remove-btn"
-                    onClick={() => setPreviewImage(null)}
-                  >
-                    Remove
-                  </button>
-                )}
-              </div>
-              <p className="upload-hint">JPG, PNG or GIF. Max size 2MB.</p>
-            </div>
-          </div>
 
-          {/* Basic Information */}
+        {msg.text && (
+          <div style={{
+            padding: "12px 16px", borderRadius: 8, marginBottom: 16,
+            background: msg.type === "success" ? "#d4edda" : "#f8d7da",
+            color: msg.type === "success" ? "#155724" : "#721c24"
+          }}>{msg.text}</div>
+        )}
+
+        <form onSubmit={handleSave} className="settings-form">
           <div className="settings-form-grid">
             <div className="settings-form-group">
-              <label htmlFor="name" className="settings-label">Full Name</label>
+              <label className="settings-label">Full Name</label>
               <input
-                type="text"
-                id="name"
-                name="name"
-                value={profile.name}
-                onChange={handleInputChange}
                 className="settings-input"
-                placeholder="Enter your full name"
+                value={form.fullName}
+                onChange={e => setForm(p => ({ ...p, fullName: e.target.value }))}
+                required
               />
             </div>
-            
             <div className="settings-form-group">
-              <label htmlFor="displayName" className="settings-label">Author Display Name</label>
+              <label className="settings-label">Phone</label>
               <input
-                type="text"
-                id="displayName"
-                name="displayName"
-                value={profile.displayName}
-                onChange={handleInputChange}
                 className="settings-input"
-                placeholder="Name shown to readers"
+                value={form.phone}
+                onChange={e => setForm(p => ({ ...p, phone: e.target.value }))}
+                placeholder="+977-98XXXXXXXX"
               />
             </div>
           </div>
 
           <div className="settings-form-group">
-            <label htmlFor="email" className="settings-label">Email Address</label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              value={profile.email}
-              className="settings-input readonly"
-              readOnly
-            />
-            <p className="settings-hint">Email cannot be changed. Contact support if needed.</p>
+            <label className="settings-label">Email Address</label>
+            <input className="settings-input readonly" value={profile.email} readOnly />
+            <p className="settings-hint">Email cannot be changed.</p>
           </div>
 
           <div className="settings-form-group">
-            <label htmlFor="bio" className="settings-label">Author Bio</label>
+            <label className="settings-label">Author Bio</label>
             <textarea
-              id="bio"
-              name="bio"
-              value={profile.bio}
-              onChange={handleInputChange}
               className="settings-textarea"
-              rows="5"
-              placeholder="Tell readers about yourself, your writing style, and experience..."
-            />
-            <p className="settings-hint">This will be displayed on your author page. {profile.bio.length}/500 characters</p>
-          </div>
-
-          <div className="settings-form-actions">
-            <button type="submit" className="btn-primary">
-              Save Changes
-            </button>
-            <button type="button" className="btn-secondary">
-              Cancel
-            </button>
-          </div>
-        </form>
-      </div>
-
-      {/* Password & Security Section */}
-      <div className="profile-settings-section">
-        <div className="settings-section-header">
-          <h2 className="settings-section-title">Password & Security</h2>
-          <p className="settings-section-subtitle">Update your password to keep your account secure</p>
-        </div>
-        
-        <form onSubmit={handleUpdatePassword} className="settings-form">
-          <div className="settings-form-group">
-            <label htmlFor="currentPassword" className="settings-label">Current Password</label>
-            <input
-              type="password"
-              id="currentPassword"
-              name="currentPassword"
-              value={passwords.currentPassword}
-              onChange={handlePasswordChange}
-              className="settings-input"
-              placeholder="Enter current password"
+              rows={5}
+              value={form.bio}
+              onChange={e => setForm(p => ({ ...p, bio: e.target.value }))}
+              placeholder="Tell readers about yourself..."
             />
           </div>
 
-          <div className="settings-form-grid">
-            <div className="settings-form-group">
-              <label htmlFor="newPassword" className="settings-label">New Password</label>
-              <input
-                type="password"
-                id="newPassword"
-                name="newPassword"
-                value={passwords.newPassword}
-                onChange={handlePasswordChange}
-                className="settings-input"
-                placeholder="Enter new password"
-              />
-            </div>
-            
-            <div className="settings-form-group">
-              <label htmlFor="confirmPassword" className="settings-label">Confirm New Password</label>
-              <input
-                type="password"
-                id="confirmPassword"
-                name="confirmPassword"
-                value={passwords.confirmPassword}
-                onChange={handlePasswordChange}
-                className="settings-input"
-                placeholder="Confirm new password"
-              />
-            </div>
-          </div>
-
-          <div className="password-requirements">
-            <p className="requirements-title">Password Requirements:</p>
-            <ul className="requirements-list">
-              <li>At least 8 characters long</li>
-              <li>Contains uppercase and lowercase letters</li>
-              <li>Contains at least one number</li>
-              <li>Contains at least one special character</li>
-            </ul>
-          </div>
-
           <div className="settings-form-actions">
-            <button type="submit" className="btn-primary">
-              Update Password
-            </button>
-            <button type="button" className="btn-secondary">
-              Cancel
+            <button type="submit" className="btn-primary" disabled={saving}>
+              {saving ? "Saving..." : "Save Changes"}
             </button>
           </div>
         </form>

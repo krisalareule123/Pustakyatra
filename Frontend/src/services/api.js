@@ -125,31 +125,28 @@ export const readerAPI = {
   },
 };
 
-// Author Authentication APIs (for future use)
+// Author Authentication APIs
 export const authorAPI = {
-  // Register new author
   register: async (userData) => {
-    return apiCall("/authors/register", {
-      method: "POST",
-      body: JSON.stringify(userData),
-    });
+    return apiCall("/authors/register", { method: "POST", body: JSON.stringify(userData) });
   },
 
-  // Login author
   login: async (credentials) => {
-    return apiCall("/authors/login", {
-      method: "POST",
-      body: JSON.stringify(credentials),
-    });
+    return apiCall("/authors/login", { method: "POST", body: JSON.stringify(credentials) });
   },
 
-  // Get author profile (protected)
+  verifyEmail: async (email, otp) => {
+    return apiCall("/authors/verify-email", { method: "POST", body: JSON.stringify({ email, otp }) });
+  },
+
+  resendOTP: async (email) => {
+    return apiCall("/authors/resend-otp", { method: "POST", body: JSON.stringify({ email }) });
+  },
+
   getProfile: async (token) => {
-    return apiCall("/authors/profile", {
+    return apiCall("/authors/me", {
       method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+      headers: { Authorization: `Bearer ${token}` },
     });
   },
 };
@@ -229,6 +226,14 @@ export const orderAPI = {
     });
   },
 
+  simulatePayment: async (token, orderId) => {
+    return apiCall("/orders/simulate-payment", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ orderId }),
+    });
+  },
+
   submitPayment: async (token, orderId) => {
     return apiCall("/orders/submit-payment", {
       method: "POST",
@@ -256,6 +261,26 @@ export const orderAPI = {
     return apiCall("/orders/library", {
       method: "GET",
       headers: { Authorization: `Bearer ${token}` },
+    });
+  },
+
+  checkBookAccess: async (token, bookId) => {
+    return apiCall(`/orders/access/${bookId}`, {
+      method: "GET",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  },
+
+  issueReadToken: async (token, bookId) => {
+    return apiCall(`/orders/read-token/${bookId}`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  },
+
+  resolveReadToken: async (readToken) => {
+    return apiCall(`/orders/resolve/${readToken}`, {
+      method: "GET",
     });
   },
 

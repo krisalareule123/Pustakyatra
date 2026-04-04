@@ -464,6 +464,28 @@ const verifyEsewa = async (req, res) => {
               (err3) => { if (err3) console.error("Error granting book access:", err3.message); }
             );
 
+            // Step 7: Notify authors for each purchased/rented book (non-blocking)
+            const { createAuthorNotification } = require("./bookController");
+            db.query(
+              `SELECT oi.book_id, oi.item_type, oi.book_title, b.author_id
+               FROM order_items oi
+               LEFT JOIN books b ON b.book_id = oi.book_id
+               WHERE oi.order_id = ?`,
+              [orderId],
+              (err4, items) => {
+                if (!err4 && items) {
+                  items.forEach(item => {
+                    if (!item.author_id) return;
+                    const type = item.item_type === "rent" ? "rent" : "purchase";
+                    const msg = item.item_type === "rent"
+                      ? `Someone rented "${item.book_title}"`
+                      : `Someone purchased "${item.book_title}"`;
+                    createAuthorNotification(item.author_id, item.book_id, type, msg);
+                  });
+                }
+              }
+            );
+
             fetchAndReturnOrder(orderId, transaction_code, res);
           }
         );
@@ -566,6 +588,213 @@ const getLibrary = (req, res) => {
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
+// Issue a short-lived read token for a book the reader has access to
+// Returns a signed JWT token used in the reader URL — hides raw book_id
+const issueReadToken = (req, res) => {
+  try {
+    const readerId = req.user.reader_id;
+    const { bookId } = req.params;
+
+    // Verify access first
+    const query = `
+      SELECT oi.book_id, oi.book_title, oi.item_type, oi.access_expires_at
+      FROM orders o
+      JOIN order_items oi ON o.order_id = oi.order_id
+      WHERE o.reader_id = ? AND oi.book_id = ? AND o.status = 'paid'
+        AND (oi.item_type = 'buy' OR (oi.item_type = 'rent' AND oi.access_expires_at > NOW()))
+      LIMIT 1
+    `;
+
+    db.query(query, [readerId, bookId], (err, results) => {
+      if (err) {
+        console.error("DB error issuing read token:", err.message);
+        return res.status(500).json({ success: false, message: "Server error" });
+      }
+
+      if (!results || results.length === 0) {
+        return res.status(403).json({
+          success: false,
+          message: "Access denied. Purchase or rent this book to read it."
+        });
+      }
+
+      const row = results[0];
+      const jwt = require("jsonwebtoken");
+
+      // Sign a token: expires in 4 hours, encodes reader + book
+      const token = jwt.sign(
+        { readerId, bookId: row.book_id, type: "read" },
+        process.env.JWT_SECRET,
+        { expiresIn: "4h" }
+      );
+
+      // Encode as URL-safe base64 with a prefix so it looks clean
+      const publicToken = "read_" + Buffer.from(token).toString("base64url");
+
+      res.status(200).json({ success: true, readToken: publicToken });
+    });
+  } catch (error) {
+    console.error("issueReadToken error:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+// Resolve a read token — verify it and return book access info + pdf url
+// This is called by the Reader page on load
+const resolveReadToken = (req, res) => {
+  try {
+    const { token } = req.params;
+
+    if (!token || !token.startsWith("read_")) {
+      return res.status(400).json({ success: false, message: "Invalid read token" });
+    }
+
+    const jwt = require("jsonwebtoken");
+    let payload;
+
+    try {
+      const rawToken = Buffer.from(token.slice(5), "base64url").toString("utf-8");
+      payload = jwt.verify(rawToken, process.env.JWT_SECRET);
+    } catch (e) {
+      return res.status(401).json({ success: false, message: "Read token expired or invalid. Please go back to My Library." });
+    }
+
+    if (payload.type !== "read") {
+      return res.status(401).json({ success: false, message: "Invalid token type" });
+    }
+
+    const { readerId, bookId } = payload;
+
+    // Re-verify DB access AND join books table for pdf_file
+    const query = `
+      SELECT
+        oi.book_id, oi.book_title, oi.item_type,
+        oi.rent_days, oi.access_expires_at,
+        o.order_id, o.paid_at,
+        b.pdf_file, b.title AS db_title
+      FROM orders o
+      JOIN order_items oi ON o.order_id = oi.order_id
+      LEFT JOIN books b ON b.book_id = oi.book_id
+      WHERE o.reader_id = ? AND oi.book_id = ? AND o.status = 'paid'
+        AND (oi.item_type = 'buy' OR (oi.item_type = 'rent' AND oi.access_expires_at > NOW()))
+      ORDER BY o.paid_at DESC
+      LIMIT 1
+    `;
+
+    db.query(query, [readerId, bookId], (err, results) => {
+      if (err) {
+        console.error("DB error resolving read token:", err.message);
+        return res.status(500).json({ success: false, message: "Server error" });
+      }
+
+      if (!results || results.length === 0) {
+        return res.status(403).json({
+          success: false,
+          message: "Access denied or rental has expired."
+        });
+      }
+
+      const row = results[0];
+      const isRent = row.item_type === "rent";
+      const remainingDays = isRent && row.access_expires_at
+        ? Math.ceil((new Date(row.access_expires_at) - new Date()) / (1000 * 60 * 60 * 24))
+        : null;
+
+      const canDownload = row.item_type === "buy";
+      // pdfAvailable = book has a real uploaded PDF in the books table
+      const pdfAvailable = !!row.pdf_file;
+      // Protected read URL — frontend will call this to stream the PDF
+      const pdfReadUrl = pdfAvailable
+        ? `${process.env.BACKEND_URL || "http://localhost:5001"}/api/books/${row.book_id}/read`
+        : null;
+      const pdfDownloadUrl = (canDownload && pdfAvailable)
+        ? `${process.env.BACKEND_URL || "http://localhost:5001"}/api/books/${row.book_id}/download`
+        : null;
+
+      res.status(200).json({
+        success: true,
+        bookId: row.book_id,
+        bookTitle: row.db_title || row.book_title,
+        accessType: row.item_type,
+        rentExpiresAt: row.access_expires_at,
+        remainingDays,
+        canDownload,
+        pdfAvailable,
+        pdfReadUrl,
+        pdfDownloadUrl,
+        orderId: row.order_id,
+        paidAt: row.paid_at
+      });
+    });
+  } catch (error) {
+    console.error("resolveReadToken error:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+// Verify reader has access to a specific book (for reader page)
+const checkBookAccess = (req, res) => {
+  try {
+    const readerId = req.user.reader_id;
+    const { bookId } = req.params;
+
+    const query = `
+      SELECT
+        oi.book_id, oi.book_title, oi.item_type,
+        oi.rent_days, oi.access_expires_at,
+        o.order_id, o.paid_at
+      FROM orders o
+      JOIN order_items oi ON o.order_id = oi.order_id
+      WHERE o.reader_id = ?
+        AND oi.book_id = ?
+        AND o.status = 'paid'
+        AND (
+          oi.item_type = 'buy'
+          OR (oi.item_type = 'rent' AND oi.access_expires_at > NOW())
+        )
+      ORDER BY o.paid_at DESC
+      LIMIT 1
+    `;
+
+    db.query(query, [readerId, bookId], (err, results) => {
+      if (err) {
+        console.error("DB error checking book access:", err.message);
+        return res.status(500).json({ success: false, message: "Server error" });
+      }
+
+      if (!results || results.length === 0) {
+        return res.status(403).json({
+          success: false,
+          message: "Access denied. Please purchase or rent this book to read it."
+        });
+      }
+
+      const row = results[0];
+      const isRent = row.item_type === "rent";
+      const remainingDays = isRent && row.access_expires_at
+        ? Math.ceil((new Date(row.access_expires_at) - new Date()) / (1000 * 60 * 60 * 24))
+        : null;
+
+      res.status(200).json({
+        success: true,
+        access: {
+          bookId: row.book_id,
+          bookTitle: row.book_title,
+          accessType: row.item_type,
+          rentExpiresAt: row.access_expires_at,
+          remainingDays,
+          orderId: row.order_id,
+          paidAt: row.paid_at
+        }
+      });
+    });
+  } catch (error) {
+    console.error("checkBookAccess error:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+// Update order to failed/cancelled
 const failOrder = (req, res) => {
   try {
     const readerId = req.user.reader_id;
@@ -709,15 +938,70 @@ const adminGetOrder = (req, res) => {
   }
 };
 
+// DEV ONLY: Simulate a successful payment without going through eSewa
+// Useful when eSewa sandbox is down (502/503 errors)
+const simulatePayment = (req, res) => {
+  try {
+    const readerId = req.user.reader_id;
+    const { orderId } = req.body;
+
+    if (!orderId) {
+      return res.status(400).json({ success: false, message: "orderId is required" });
+    }
+
+    const fakeTransactionCode = "SIM" + Date.now();
+    const paymentReference = `Simulated/${fakeTransactionCode}/${new Date().toISOString().slice(0, 10)}`;
+
+    db.query(
+      `UPDATE orders
+       SET status = 'paid',
+           transaction_uuid = ?,
+           transaction_code = ?,
+           payment_reference = ?,
+           paid_at = NOW()
+       WHERE order_id = ? AND reader_id = ? AND status = 'pending_payment'`,
+      [`SIM${orderId}T${Date.now()}`, fakeTransactionCode, paymentReference, orderId, readerId],
+      (err, result) => {
+        if (err) {
+          console.error("Simulate payment DB error:", err.message);
+          return res.status(500).json({ success: false, message: "DB error" });
+        }
+        if (result.affectedRows === 0) {
+          return res.status(404).json({ success: false, message: "Order not found or already processed" });
+        }
+
+        // Grant book access
+        db.query(
+          `UPDATE order_items
+           SET access_expires_at = CASE
+             WHEN item_type = 'rent' THEN DATE_ADD(NOW(), INTERVAL rent_days DAY)
+             ELSE NULL
+           END
+           WHERE order_id = ?`,
+          [orderId], () => {}
+        );
+
+        return fetchAndReturnOrder(orderId, fakeTransactionCode, res);
+      }
+    );
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
 module.exports = {
   createOrder,
   submitPayment,
   getOrder,
   getMyOrders,
   getLibrary,
+  checkBookAccess,
+  issueReadToken,
+  resolveReadToken,
   initiateEsewa,
   verifyEsewa,
   failOrder,
+  simulatePayment,
   adminGetAllOrders,
   adminGetOrder
 };

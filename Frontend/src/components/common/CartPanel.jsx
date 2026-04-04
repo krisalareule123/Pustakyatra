@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { getBookById } from "../../data/mockBooks";
 import "../../pages/Pages.css";
 
 export default function CartPanel() {
@@ -83,34 +82,6 @@ export default function CartPanel() {
     window.dispatchEvent(new Event('closeCart'));
   };
 
-  const getPlaceholderCover = (book, size = 'small') => {
-    if (!book) return null;
-    const initials = book.title.split(" ").slice(0, 2).map((w) => w[0]?.toUpperCase()).join("");
-    const colors = [
-      'linear-gradient(135deg, #3b5723 0%, #4a6b2a 100%)',
-      'linear-gradient(135deg, #2d4a1a 0%, #3b5723 100%)',
-      'linear-gradient(135deg, #4a6b2a 0%, #5a8234 100%)',
-      'linear-gradient(135deg, #1a2912 0%, #2d4a1a 100%)',
-      'linear-gradient(135deg, #5a8234 0%, #6b9142 100%)',
-      'linear-gradient(135deg, #2d4a1a 0%, #4a6b2a 100%)'
-    ];
-    const colorIndex = book.id % colors.length;
-    const dimensions = {
-      small: { width: '60px', height: '85px', fontSize: '16px', borderRadius: '4px' }
-    };
-    const dim = dimensions[size];
-    return (
-      <div className="book-placeholder-cover" style={{
-        background: colors[colorIndex], width: dim.width, height: dim.height,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        color: 'white', fontSize: dim.fontSize, fontWeight: '700',
-        borderRadius: dim.borderRadius, position: 'relative', overflow: 'hidden'
-      }}>
-        <span style={{ zIndex: 2 }}>{initials}</span>
-      </div>
-    );
-  };
-
   if (!showCartPanel) return null;
 
   return (
@@ -130,28 +101,45 @@ export default function CartPanel() {
           ) : (
             <>
               <div className="cart-items-list">
-                {cartItems.map((item, index) => (
-                  <div key={index} className="cart-item">
-                    <div className="cart-item-cover">
-                      {getPlaceholderCover(getBookById(item.bookId), 'small')}
-                    </div>
-                    <div className="cart-item-details">
-                      <div className="cart-item-title">{item.title}</div>
-                      <div className="cart-item-type">{item.type === 'buy' ? 'E-book' : 'E-book (Rent)'}</div>
-                      <div className="cart-item-price">Rs {item.price.toFixed(2)}</div>
-                    </div>
-                    <div className="cart-item-actions">
-                      <div className="cart-item-quantity">
-                        <button onClick={() => updateCartQuantity(item.bookId, item.type, item.quantity - 1)}>-</button>
-                        <span>{item.quantity}</span>
-                        <button onClick={() => updateCartQuantity(item.bookId, item.type, item.quantity + 1)}>+</button>
+                {cartItems.map((item, index) => {
+                  const inits = item.title
+                    ? item.title.split(" ").slice(0, 2).map(w => w[0]?.toUpperCase()).join("")
+                    : "?";
+                  const colors = [
+                    "linear-gradient(135deg,#3b5723,#4a6b2a)",
+                    "linear-gradient(135deg,#2d4a1a,#3b5723)",
+                    "linear-gradient(135deg,#4a6b2a,#5a8234)",
+                    "linear-gradient(135deg,#1a2912,#2d4a1a)",
+                  ];
+                  const bg = colors[index % colors.length];
+                  return (
+                    <div key={index} className="cart-item">
+                      <div className="cart-item-cover">
+                        <div style={{
+                          background: bg, width: 60, height: 85,
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          color: "white", fontSize: 16, fontWeight: 700,
+                          borderRadius: 4, flexShrink: 0
+                        }}>{inits}</div>
                       </div>
-                      <button className="cart-item-remove" onClick={() => removeFromCart(item.bookId, item.type)}>
-                        Remove
-                      </button>
+                      <div className="cart-item-details">
+                        <div className="cart-item-title">{item.title}</div>
+                        <div className="cart-item-type">{item.type === "buy" ? "E-book" : "E-book (Rent)"}</div>
+                        <div className="cart-item-price">Rs {item.price.toFixed(2)}</div>
+                      </div>
+                      <div className="cart-item-actions">
+                        <div className="cart-item-quantity">
+                          <button onClick={() => updateCartQuantity(item.bookId, item.type, item.quantity - 1)}>-</button>
+                          <span>{item.quantity}</span>
+                          <button onClick={() => updateCartQuantity(item.bookId, item.type, item.quantity + 1)}>+</button>
+                        </div>
+                        <button className="cart-item-remove" onClick={() => removeFromCart(item.bookId, item.type)}>
+                          Remove
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
               
               <div className="cart-panel-footer">

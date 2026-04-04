@@ -300,28 +300,24 @@ export default function MyAccount() {
             </button>
 
             <button
-              className={`accItem ${active === "download" ? "active" : ""}`}
-              onClick={() => setActive("download")}
-              type="button"
-            >
-              <span className="accIcon">⬇️</span> Download
-            </button>
-
-            <button
-              className={`accItem ${active === "edit" ? "active" : ""}`}
-              onClick={() => setActive("edit")}
-              type="button"
-            >
-              <span className="accIcon">✏️</span> Edit Profile
-            </button>
-
-            <button
               className={`accItem ${active === "settings" ? "active" : ""}`}
               onClick={() => setActive("settings")}
               type="button"
             >
               <span className="accIcon">⚙️</span> Settings
             </button>
+
+            <div className="accMenuDivider" />
+
+            <a href="/my-orders" className="accItem">
+              <span className="accIcon">📋</span> My Orders
+            </a>
+
+            <a href="/my-library" className="accItem">
+              <span className="accIcon">📚</span> My Library
+            </a>
+
+            <div className="accMenuDivider" />
 
             <button
               className="accItem danger"
@@ -348,9 +344,20 @@ export default function MyAccount() {
                     Hello, <b>{user.fullName || "User"}</b>
                   </p>
                   <p className="accText">
-                    From your account dashboard, you can easily check & view your recent downloads,
-                    manage your account and edit your password and account details.
+                    From your account dashboard you can view your purchased books in{" "}
+                    <a href="/my-library" className="accLink">My Library</a>, check your{" "}
+                    <a href="/my-orders" className="accLink">order history</a>, and manage your account details and password.
                   </p>
+                  <div className="accDashLinks">
+                    <a href="/my-library" className="accDashCard">
+                      <span className="accDashIcon">📚</span>
+                      <span>My Library</span>
+                    </a>
+                    <a href="/my-orders" className="accDashCard">
+                      <span className="accDashIcon">📋</span>
+                      <span>My Orders</span>
+                    </a>
+                  </div>
                 </>
               )}
 
@@ -487,51 +494,7 @@ export default function MyAccount() {
                 </>
               )}
 
-                {active === "download" && (
-                <>
-                  <h1 className="accTitle">Download</h1>
-                  <p className="accText">No downloads yet. (Demo)</p>
-
-                  <div className="accTable">
-                    <div className="accRow head">
-                      <span>Book</span>
-                      <span>Date</span>
-                      <span>Status</span>
-                    </div>
-                    <div className="accRow">
-                      <span>—</span>
-                      <span>—</span>
-                      <span className="pill">Empty</span>
-                    </div>
-                  </div>
-                </>
-              )}
-
-                {active === "edit" && (
-                <>
-                  <h1 className="accTitle">Edit Profile</h1>
-                  <div className="accFormGrid">
-                    <div className="accField">
-                      <label>Full Name</label>
-                      <input defaultValue={user.fullName} />
-                    </div>
-                    <div className="accField">
-                      <label>Email</label>
-                      <input defaultValue={user.email} />
-                    </div>
-                    <div className="accField accFull">
-                      <label>Bio</label>
-                      <textarea rows={4} placeholder="Write something about you..." />
-                    </div>
-
-                    <button className="btnPrimary accSaveBtn" type="button">
-                      Save Profile
-                    </button>
-                  </div>
-                </>
-              )}
-
-                {active === "settings" && (
+              {active === "settings" && (
                 <>
                   <h1 className="accTitle">Settings</h1>
                   <p className="accText">Settings page (demo).</p>

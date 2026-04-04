@@ -139,8 +139,8 @@ export default function PaymentSuccess() {
           )}
 
           <div className="success-actions">
-            <Link to="/my-orders" className="btn-go-dashboard">View My Orders</Link>
-            <Link to="/browse" className="btn-go-dashboard btn-secondary-action">Browse More</Link>
+            <Link to="/my-library" className="btn-go-dashboard">Go to My Library</Link>
+            <Link to="/my-orders" className="btn-go-dashboard btn-secondary-action">View Orders</Link>
           </div>
         </div>
       </div>

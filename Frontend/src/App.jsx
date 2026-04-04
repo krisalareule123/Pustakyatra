@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Outlet } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Outlet, Navigate } from "react-router-dom";
 
 import Navbar from "./components/common/Navbar.jsx";
 import Footer from "./components/common/Footer.jsx";
@@ -12,6 +12,8 @@ import Payment from "./pages/Payment.jsx";
 import PaymentSuccess from "./pages/PaymentSuccess.jsx";
 import PaymentFailure from "./pages/PaymentFailure.jsx";
 import MyOrders from "./pages/MyOrders.jsx";
+import MyLibrary from "./pages/MyLibrary.jsx";
+import Reader from "./pages/Reader.jsx";
 
 import Browse from "./pages/Browse";
 import Categories from "./pages/Categories";
@@ -51,7 +53,12 @@ export default function App() {
           <Route path="add-book" element={<AddBook />} />
           <Route path="sales" element={<Sales />} />
           <Route path="profile" element={<AuthorProfile />} />
+          {/* Catch unknown /author/* paths — redirect to login */}
+          <Route path="*" element={<Navigate to="/login" replace />} />
         </Route>
+
+        {/* Reader page — full screen, no Navbar/Footer */}
+        <Route path="/reader/:readToken" element={<Reader />} />
 
         {/* Reader Routes with Navbar & Footer */}
         <Route path="*" element={
@@ -66,12 +73,13 @@ export default function App() {
               <Route path="/categories" element={<Categories />} />
               <Route path="/authors" element={<Authors />} />
               <Route path="/about" element={<About />} />
-              <Route path="/book/:slug" element={<BookDetails />} />
+              <Route path="/book/:bookId" element={<BookDetails />} />
               <Route path="/dashboard" element={<UserDashboard />} />
               <Route path="/payment" element={<Payment />} />
               <Route path="/payment/success" element={<PaymentSuccess />} />
               <Route path="/payment/failure" element={<PaymentFailure />} />
               <Route path="/my-orders" element={<MyOrders />} />
+              <Route path="/my-library" element={<MyLibrary />} />
             </Routes>
             <Footer />
           </>

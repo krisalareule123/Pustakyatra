@@ -1,0 +1,328 @@
+/* Reader shell — full viewport, no navbar */
+.reader-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: #1a1a1a;
+  overflow: hidden;
+}
+
+/* Top bar */
+.reader-topbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 20px;
+  height: 52px;
+  background: #111;
+  border-bottom: 1px solid #2a2a2a;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.reader-back {
+  background: none;
+  border: none;
+  color: #aaa;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: 6px;
+  white-space: nowrap;
+  transition: color 0.15s, background 0.15s;
+}
+.reader-back:hover { color: #fff; background: rgba(255,255,255,0.08); }
+
+.reader-book-meta {
+  flex: 1;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+}
+
+.reader-book-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.reader-book-author {
+  font-size: 12px;
+  color: #666;
+  white-space: nowrap;
+}
+
+.reader-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.reader-access-info { flex-shrink: 0; }
+
+.reader-access-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.reader-badge-owned { background: #1e3a14; color: #6fcf6f; }
+.reader-badge-rent  { background: #3a2e00; color: #f0c040; }
+
+.reader-download-btn {
+  padding: 5px 12px;
+  background: rgba(255,255,255,0.1);
+  color: #ccc;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  border: 1px solid rgba(255,255,255,0.15);
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.reader-download-btn:hover { background: rgba(255,255,255,0.18); color: #fff; }
+
+/* Reader body */
+.reader-body {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+}
+
+.reader-pdf-loading {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  background: #f5f3ee;
+  color: #666;
+  font-size: 14px;
+}
+
+.reader-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: #fff;
+}
+
+/* Placeholder (no PDF yet) */
+.reader-placeholder {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 48px;
+  padding: 40px 32px;
+  background: #f5f3ee;
+  overflow-y: auto;
+}
+
+.reader-placeholder-cover {
+  width: 180px;
+  height: 240px;
+  background: linear-gradient(145deg, #3b5723, #527a30);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.25);
+}
+
+.reader-placeholder-initials {
+  font-size: 48px;
+  font-weight: 800;
+  color: rgba(255,255,255,0.85);
+  letter-spacing: 2px;
+}
+
+.reader-placeholder-info {
+  max-width: 480px;
+}
+
+.reader-placeholder-info h2 {
+  font-size: 26px;
+  font-weight: 700;
+  color: #1a2912;
+  margin: 0 0 6px;
+  line-height: 1.25;
+}
+
+.reader-placeholder-author {
+  font-size: 15px;
+  color: #888;
+  margin: 0 0 20px;
+}
+
+.reader-placeholder-access {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.rp-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.rp-badge-owned { background: #e6f4ea; color: #1e6b35; }
+.rp-badge-rent  { background: #fff3cd; color: #856404; }
+
+.rp-detail {
+  font-size: 13px;
+  color: #666;
+}
+
+.reader-placeholder-desc {
+  font-size: 14px;
+  color: #555;
+  line-height: 1.65;
+  margin: 0 0 24px;
+}
+
+.reader-placeholder-notice {
+  display: flex;
+  gap: 14px;
+  background: #fff;
+  border: 1px solid #e0ddd6;
+  border-radius: 10px;
+  padding: 16px 18px;
+  margin-bottom: 24px;
+}
+
+.rp-notice-icon { font-size: 24px; flex-shrink: 0; }
+
+.rp-notice-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1a2912;
+  margin: 0 0 4px;
+}
+
+.rp-notice-sub {
+  font-size: 13px;
+  color: #888;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.reader-placeholder-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.rp-btn-library {
+  padding: 10px 20px;
+  background: #3b5723;
+  color: white;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.15s;
+}
+.rp-btn-library:hover { background: #2d4419; }
+
+.rp-btn-details {
+  padding: 10px 20px;
+  background: transparent;
+  color: #3b5723;
+  border: 1px solid #3b5723;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.15s;
+}
+.rp-btn-details:hover { background: #3b5723; color: white; }
+
+/* Gate screens (checking / denied / error) */
+.reader-gate {
+  min-height: 100vh;
+  background: #f5f3ee;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 40px 20px;
+  text-align: center;
+}
+
+.reader-gate-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #e0ddd6;
+  border-top-color: #3b5723;
+  border-radius: 50%;
+  animation: rg-spin 0.75s linear infinite;
+}
+@keyframes rg-spin { to { transform: rotate(360deg); } }
+
+.reader-gate-icon { font-size: 52px; }
+
+.reader-gate h2 {
+  font-size: 22px;
+  font-weight: 700;
+  color: #1a2912;
+  margin: 0;
+}
+
+.reader-gate p {
+  font-size: 15px;
+  color: #666;
+  max-width: 380px;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.reader-gate-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.reader-gate-btn {
+  padding: 11px 24px;
+  background: #3b5723;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.reader-gate-btn:hover { background: #2d4419; }
+
+.reader-gate-btn-outline {
+  background: transparent;
+  color: #3b5723;
+  border: 1px solid #3b5723;
+}
+.reader-gate-btn-outline:hover { background: #3b5723; color: white; }
+
+@media (max-width: 640px) {
+  .reader-placeholder { flex-direction: column; align-items: flex-start; gap: 28px; }
+  .reader-placeholder-cover { width: 120px; height: 160px; align-self: center; }
+  .reader-placeholder-initials { font-size: 32px; }
+  .reader-topbar { padding: 0 12px; }
+  .reader-book-author { display: none; }
+}

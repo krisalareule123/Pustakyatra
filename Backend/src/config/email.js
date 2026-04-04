@@ -194,4 +194,55 @@ const sendLoginOTPEmail = async (userEmail, userName, otp) => {
   }
 };
 
-module.exports = { sendWelcomeEmail, sendOTPEmail, sendPasswordResetEmail, sendLoginOTPEmail };
+module.exports = { sendWelcomeEmail, sendOTPEmail, sendPasswordResetEmail, sendLoginOTPEmail, sendAuthorWelcomeEmail };
+
+async function sendAuthorWelcomeEmail(authorEmail, authorName) {
+  const mailOptions = {
+    from: process.env.EMAIL_FROM,
+    to: authorEmail,
+    subject: "Welcome to Pustakyatra — Your Author Journey Begins! ✍️",
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #ddd; border-radius: 12px; overflow: hidden;">
+        <div style="background: #3b5723; color: white; padding: 30px; text-align: center;">
+          <h1 style="margin: 0;">📚 Pustakyatra</h1>
+          <p style="margin: 10px 0 0;">Author Portal</p>
+        </div>
+        <div style="padding: 32px; background: #ffffff;">
+          <h2 style="color: #1a2912; margin-top: 0;">Welcome, ${authorName}! ✍️</h2>
+          <p style="color: #444; line-height: 1.7;">
+            Your author account on <strong>Pustakyatra</strong> has been verified and is now active.
+            You can now publish your books, reach readers across Nepal, and grow your literary presence.
+          </p>
+          <div style="background: #f0f7eb; border-left: 4px solid #3b5723; padding: 16px 20px; border-radius: 0 8px 8px 0; margin: 24px 0;">
+            <p style="margin: 0; color: #2d4419; font-weight: 600;">What you can do now:</p>
+            <ul style="margin: 10px 0 0; padding-left: 20px; color: #3b5723; line-height: 1.8;">
+              <li>Upload and publish your books (PDF)</li>
+              <li>Set buy and rental pricing</li>
+              <li>Track your sales and earnings</li>
+              <li>Connect with readers across Nepal</li>
+            </ul>
+          </div>
+          <p style="color: #444; line-height: 1.7;">
+            Log in to your Author Panel to get started. We are excited to have you as part of the Pustakyatra community.
+          </p>
+          <p style="margin-top: 28px; color: #444;">
+            With warm regards,<br>
+            <strong style="color: #1a2912;">The Pustakyatra Team</strong>
+          </p>
+        </div>
+        <div style="background: #f8f9fa; padding: 20px; text-align: center; color: #6c757d; font-size: 13px;">
+          <p style="margin: 4px 0;"><strong>Pustakyatra</strong> — Nepal's Digital Library</p>
+          <p style="margin: 4px 0;">pustakyatra072@gmail.com · Kathmandu, Nepal</p>
+        </div>
+      </div>
+    `
+  };
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log("✅ Author welcome email sent to:", authorEmail);
+    return { success: true };
+  } catch (error) {
+    console.error("❌ Author welcome email failed:", error.message);
+    return { success: false, error: error.message };
+  }
+}

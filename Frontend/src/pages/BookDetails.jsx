@@ -1,301 +1,221 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { getBookById, mockBooks, getIdFromSlug, generateSlug } from "../data/mockBooks";
 import ReviewSection from "../components/ReviewSection";
 import "./Pages.css";
 
+const API = "http://localhost:5001/api";
+
+const COLORS = [
+  "linear-gradient(135deg,#3b5723,#4a6b2a)",
+  "linear-gradient(135deg,#2d4a1a,#3b5723)",
+  "linear-gradient(135deg,#4a6b2a,#5a8234)",
+  "linear-gradient(135deg,#1a2912,#2d4a1a)",
+];
+
+const initials = (title) =>
+  title ? title.split(" ").slice(0, 2).map(w => w[0]?.toUpperCase()).join("") : "?";
+
 export default function BookDetails() {
-  const { slug } = useParams();
+  const { bookId } = useParams();
   const navigate = useNavigate();
-  const id = getIdFromSlug(slug);
-  const book = getBookById(id);
-  
-  const [selectedThumbnail, setSelectedThumbnail] = useState(0);
-  const [buyQuantity, setBuyQuantity] = useState(1);
-  const [rentQuantity, setRentQuantity] = useState(1);
-  const [showBuyPayNow, setShowBuyPayNow] = useState(false);
-  const [showRentPayNow, setShowRentPayNow] = useState(false);
 
-  // Check if book is in cart and update Pay Now buttons
+  const [book, setBook] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
+  const [buyQty, setBuyQty] = useState(1);
+  const [rentQty, setRentQty] = useState(1);
+  const [inCartBuy, setInCartBuy] = useState(false);
+  const [inCartRent, setInCartRent] = useState(false);
+
+  // Load book from real API
   useEffect(() => {
-    const checkCartStatus = () => {
-      const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-      if (book) {
-        const hasBuyItem = cart.some(item => item.bookId === book.id && item.type === 'buy');
-        const hasRentItem = cart.some(item => item.bookId === book.id && item.type === 'rent');
-        setShowBuyPayNow(hasBuyItem);
-        setShowRentPayNow(hasRentItem);
-      }
+    if (!bookId) return;
+    fetch(`${API}/books/${bookId}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) setBook(data.book);
+        else setNotFound(true);
+      })
+      .catch(() => setNotFound(true))
+      .finally(() => setLoading(false));
+  }, [bookId]);
+
+  // Sync cart state
+  useEffect(() => {
+    const sync = () => {
+      const cart = JSON.parse(localStorage.getItem("cart") || "[]");
+      setInCartBuy(cart.some(i => String(i.bookId) === String(bookId) && i.type === "buy"));
+      setInCartRent(cart.some(i => String(i.bookId) === String(bookId) && i.type === "rent"));
     };
+    sync();
+    window.addEventListener("cartUpdated", sync);
+    return () => window.removeEventListener("cartUpdated", sync);
+  }, [bookId]);
 
-    // Check on mount and when cart updates
-    checkCartStatus();
-    
-    window.addEventListener('cartUpdated', checkCartStatus);
-    window.addEventListener('openCart', checkCartStatus);
-    
-    return () => {
-      window.removeEventListener('cartUpdated', checkCartStatus);
-      window.removeEventListener('openCart', checkCartStatus);
-    };
-  }, [book]);
-
-  const handleAddToCart = (type) => {
-    const cartItem = {
-      bookId: book.id,
-      title: book.title,
-      nepaliTitle: book.nepaliTitle,
-      author: book.author,
-      type: type,
-      quantity: type === 'buy' ? buyQuantity : rentQuantity,
-      price: type === 'buy' ? book.buyPrice : book.rentPrice,
-      totalPrice: type === 'buy' ? book.buyPrice * buyQuantity : book.rentPrice * rentQuantity,
-      rentDays: type === 'rent' ? book.rentDays : null
-    };
-
-    const existingCart = JSON.parse(localStorage.getItem('cart') || '[]');
-    const existingItemIndex = existingCart.findIndex(
-      item => item.bookId === book.id && item.type === type
-    );
-
-    if (existingItemIndex > -1) {
-      existingCart[existingItemIndex].quantity += cartItem.quantity;
-      existingCart[existingItemIndex].totalPrice = 
-        existingCart[existingItemIndex].price * existingCart[existingItemIndex].quantity;
-    } else {
-      existingCart.push(cartItem);
-    }
-
-    localStorage.setItem('cart', JSON.stringify(existingCart));
-    
-    // Dispatch custom event to update cart count and open cart panel
-    window.dispatchEvent(new Event('cartUpdated'));
-    window.dispatchEvent(new Event('openCart'));
-  };
-
-  const getCartTotal = () => {
-    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-    return cart.reduce((total, item) => total + item.totalPrice, 0);
-  };
-
-  const handlePayNow = (type) => {
-    const token = localStorage.getItem("token") || localStorage.getItem("authToken");
-    if (!token) {
-      navigate("/login");
-      return;
-    }
+  const addToCart = (type) => {
+    const qty = type === "buy" ? buyQty : rentQty;
+    const price = type === "buy" ? book.buy_price : book.rent_price;
     const item = {
-      bookId: book.id,
+      bookId: book.book_id,
       title: book.title,
-      author: book.author,
+      author: book.author_name,
       type,
-      quantity: type === "buy" ? buyQuantity : rentQuantity,
-      price: type === "buy" ? book.buyPrice : book.rentPrice,
-      totalPrice: type === "buy" ? book.buyPrice * buyQuantity : book.rentPrice * rentQuantity,
-      rentDays: type === "rent" ? book.rentDays : null,
+      quantity: qty,
+      price: parseFloat(price),
+      totalPrice: parseFloat(price) * qty,
+      rentDays: type === "rent" ? book.rent_days : null,
+    };
+    const cart = JSON.parse(localStorage.getItem("cart") || "[]");
+    const idx = cart.findIndex(i => String(i.bookId) === String(book.book_id) && i.type === type);
+    if (idx > -1) {
+      cart[idx].quantity += qty;
+      cart[idx].totalPrice = cart[idx].price * cart[idx].quantity;
+    } else {
+      cart.push(item);
+    }
+    localStorage.setItem("cart", JSON.stringify(cart));
+    window.dispatchEvent(new Event("cartUpdated"));
+    window.dispatchEvent(new Event("openCart"));
+  };
+
+  const payNow = (type) => {
+    const token = localStorage.getItem("token") || localStorage.getItem("authToken");
+    if (!token) { navigate("/login"); return; }
+    const qty = type === "buy" ? buyQty : rentQty;
+    const price = type === "buy" ? book.buy_price : book.rent_price;
+    const item = {
+      bookId: book.book_id,
+      title: book.title,
+      author: book.author_name,
+      type,
+      quantity: qty,
+      price: parseFloat(price),
+      totalPrice: parseFloat(price) * qty,
+      rentDays: type === "rent" ? book.rent_days : null,
     };
     navigate("/payment", { state: { items: [item], totalAmount: item.totalPrice } });
   };
 
-  const handleCloseCart = () => {
-    window.dispatchEvent(new Event('closeCart'));
-  };
+  if (loading) return (
+    <div className="thuprai-page">
+      <div className="thuprai-container" style={{ padding: "80px 0", textAlign: "center", color: "#888" }}>
+        Loading book...
+      </div>
+    </div>
+  );
 
-  if (!book) {
-    return (
-      <div className="thuprai-page">
-        <div className="thuprai-container">
-          <div className="book-not-found">
-            <h1>Book Not Found</h1>
-            <p>The book you're looking for doesn't exist.</p>
-            <Link to="/browse" className="btn-primary-thuprai">Browse All Books</Link>
-          </div>
+  if (notFound || !book) return (
+    <div className="thuprai-page">
+      <div className="thuprai-container">
+        <div className="book-not-found">
+          <h1>Book Not Found</h1>
+          <p>This book does not exist or is not published yet.</p>
+          <Link to="/browse" className="btn-primary-thuprai">Browse All Books</Link>
         </div>
       </div>
-    );
-  }
+    </div>
+  );
 
-  const relatedBooks = mockBooks.filter(b => b.id !== book.id).slice(0, 5);
-
-  const getPlaceholderCover = (book, size = 'large') => {
-    const initials = book.title.split(" ").slice(0, 2).map((w) => w[0]?.toUpperCase()).join("");
-    const colors = [
-      'linear-gradient(135deg, #3b5723 0%, #4a6b2a 100%)',
-      'linear-gradient(135deg, #2d4a1a 0%, #3b5723 100%)',
-      'linear-gradient(135deg, #4a6b2a 0%, #5a8234 100%)',
-      'linear-gradient(135deg, #1a2912 0%, #2d4a1a 100%)',
-      'linear-gradient(135deg, #5a8234 0%, #6b9142 100%)',
-      'linear-gradient(135deg, #2d4a1a 0%, #4a6b2a 100%)'
-    ];
-    const colorIndex = book.id % colors.length;
-    const dimensions = {
-      large: { width: '100%', height: '450px', fontSize: '48px', borderRadius: '8px' },
-      medium: { width: '80px', height: '110px', fontSize: '20px', borderRadius: '6px' },
-      small: { width: '60px', height: '85px', fontSize: '16px', borderRadius: '4px' }
-    };
-    const dim = dimensions[size];
-    return (
-      <div className="book-placeholder-cover" style={{
-        background: colors[colorIndex], width: dim.width, height: dim.height,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        color: 'white', fontSize: dim.fontSize, fontWeight: '700',
-        borderRadius: dim.borderRadius, position: 'relative', overflow: 'hidden'
-      }}>
-        <div style={{
-          position: 'absolute', top: '10px', left: '10px', right: '10px',
-          height: size === 'large' ? '20px' : '10px',
-          background: 'rgba(255, 255, 255, 0.2)', borderRadius: '4px'
-        }} />
-        <div style={{
-          position: 'absolute', bottom: '10px', left: '10px', right: '10px',
-          height: size === 'large' ? '40px' : '20px',
-          background: 'rgba(255, 255, 255, 0.1)', borderRadius: '6px',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: size === 'large' ? '14px' : '8px', fontWeight: '500', padding: '0 8px'
-        }}>
-          {size === 'large' ? (book.nepaliTitle || book.title) : ''}
-        </div>
-        <span style={{ zIndex: 2 }}>{initials}</span>
-      </div>
-    );
-  };
+  const colorIdx = book.book_id % COLORS.length;
 
   return (
-    <>
-      <div className="thuprai-page">
-        <div className="thuprai-container">
-          <div className="thuprai-breadcrumb">
-            <Link to="/">Home</Link>
-            <span>/</span>
-            <Link to="/browse">Books</Link>
-            <span>/</span>
-            <span>{book.title}</span>
+    <div className="thuprai-page">
+      <div className="thuprai-container">
+        <div className="thuprai-breadcrumb">
+          <Link to="/">Home</Link><span>/</span>
+          <Link to="/browse">Books</Link><span>/</span>
+          <span>{book.title}</span>
+        </div>
+
+        <div className="thuprai-book-layout">
+          {/* Cover */}
+          <div className="thuprai-book-cover">
+            <div className="book-placeholder-cover" style={{
+              background: COLORS[colorIdx], width: "100%", height: "450px",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              color: "white", fontSize: "48px", fontWeight: "700",
+              borderRadius: "8px", position: "relative", overflow: "hidden"
+            }}>
+              <div style={{ position: "absolute", bottom: 10, left: 10, right: 10,
+                background: "rgba(255,255,255,0.1)", borderRadius: 6, padding: "8px",
+                fontSize: 14, textAlign: "center" }}>
+                {book.nepali_title || book.title}
+              </div>
+              <span style={{ zIndex: 2 }}>{initials(book.title)}</span>
+            </div>
+            {book.category && (
+              <div className="thuprai-tags">
+                <span className="thuprai-tag">{book.category}</span>
+                {book.language && <span className="thuprai-tag">{book.language}</span>}
+              </div>
+            )}
           </div>
 
-          <div className="thuprai-book-layout">
-            <div className="thuprai-book-cover">
-              {getPlaceholderCover(book, 'large')}
-              <div className="thuprai-thumbnails">
-                {[0, 1].map((index) => (
-                  <button key={index} className={`thuprai-thumb ${selectedThumbnail === index ? 'active' : ''}`}
-                    onClick={() => setSelectedThumbnail(index)}>
-                    {getPlaceholderCover(book, 'small')}
-                  </button>
-                ))}
-              </div>
-              <div className="thuprai-tags">
-                {book.categories?.map((category, index) => (
-                  <span key={index} className="thuprai-tag">{category}</span>
-                ))}
-              </div>
+          {/* Info */}
+          <div className="thuprai-book-info">
+            <h1 className="thuprai-book-title">{book.title}</h1>
+            {book.nepali_title && <h2 className="thuprai-book-subtitle">{book.nepali_title}</h2>}
+            <div className="thuprai-author">
+              by <strong>{book.author_name || "Unknown Author"}</strong>
             </div>
 
-            <div className="thuprai-book-info">
-              <h1 className="thuprai-book-title">{book.title}</h1>
-              <h2 className="thuprai-book-subtitle">{book.nepaliTitle}</h2>
-              <div className="thuprai-author">
-                by <Link to={`/authors/${book.author.replace(/\s+/g, '-').toLowerCase()}`}>{book.author}</Link>
-              </div>
-              <div className="thuprai-rating">
-                <div className="thuprai-stars">
-                  {[...Array(5)].map((_, i) => (
-                    <span key={i} className={`star ${i < Math.floor(book.rating) ? 'filled' : ''}`}>★</span>
-                  ))}
+            {/* Buy option */}
+            <div className="thuprai-purchase-options">
+              <div className="thuprai-option-card">
+                <div className="thuprai-option-header">
+                  <span className="thuprai-option-type">E-book (Buy)</span>
+                  <span className="thuprai-option-price">Rs {book.buy_price}</span>
                 </div>
-                <span className="thuprai-rating-text">{book.rating}</span>
-              </div>
-
-              <div className="thuprai-purchase-options">
-                <div className="thuprai-option-card">
-                  <div className="thuprai-option-header">
-                    <span className="thuprai-option-type">E-book</span>
-                    <span className="thuprai-option-price">Rs {book.buyPrice}</span>
+                {!inCartBuy ? (
+                  <div className="thuprai-option-actions">
+                    <div className="thuprai-quantity-selector">
+                      <button onClick={() => setBuyQty(Math.max(1, buyQty - 1))}>-</button>
+                      <input type="number" value={buyQty} readOnly />
+                      <button onClick={() => setBuyQty(buyQty + 1)}>+</button>
+                    </div>
+                    <button className="thuprai-btn-add-cart-full" onClick={() => addToCart("buy")}>
+                      🛒 Add to cart
+                    </button>
                   </div>
-                  {!showBuyPayNow ? (
-                    <>
-                      <div className="thuprai-option-actions">
-                        <div className="thuprai-quantity-selector">
-                          <button onClick={() => setBuyQuantity(Math.max(1, buyQuantity - 1))}>-</button>
-                          <input type="number" value={buyQuantity} readOnly />
-                          <button onClick={() => setBuyQuantity(buyQuantity + 1)}>+</button>
-                        </div>
-                        <button className="thuprai-btn-add-cart-full" onClick={() => handleAddToCart('buy')}>
-                          🛒 Add to cart
-                        </button>
-                      </div>
-                    </>
-                  ) : (
-                    <button className="thuprai-btn-pay" onClick={() => handlePayNow('buy')}>Pay now</button>
-                  )}
-                </div>
-
-                <div className="thuprai-option-card">
-                  <div className="thuprai-option-header">
-                    <span className="thuprai-option-type">E-book (Rent)</span>
-                    <span className="thuprai-option-price">Rs {book.rentPrice}</span>
-                  </div>
-                  <div className="thuprai-option-subtitle">{book.rentDays} days access</div>
-                  {!showRentPayNow ? (
-                    <>
-                      <div className="thuprai-option-actions">
-                        <div className="thuprai-quantity-selector">
-                          <button onClick={() => setRentQuantity(Math.max(1, rentQuantity - 1))}>-</button>
-                          <input type="number" value={rentQuantity} readOnly />
-                          <button onClick={() => setRentQuantity(rentQuantity + 1)}>+</button>
-                        </div>
-                        <button className="thuprai-btn-add-cart-full" onClick={() => handleAddToCart('rent')}>
-                          🛒 Add to cart
-                        </button>
-                      </div>
-                    </>
-                  ) : (
-                    <button className="thuprai-btn-pay" onClick={() => handlePayNow('rent')}>Rent now</button>
-                  )}
-                </div>
+                ) : (
+                  <button className="thuprai-btn-pay" onClick={() => payNow("buy")}>Pay now</button>
+                )}
               </div>
 
-              {book.nominations && book.nominations.length > 0 && (
-                <div className="thuprai-nominations">
-                  <h3>Nominations</h3>
-                  <ul>
-                    {book.nominations.map((nomination, index) => (
-                      <li key={index}>{nomination}</li>
-                    ))}
-                  </ul>
+              {/* Rent option */}
+              <div className="thuprai-option-card">
+                <div className="thuprai-option-header">
+                  <span className="thuprai-option-type">E-book (Rent)</span>
+                  <span className="thuprai-option-price">Rs {book.rent_price}</span>
                 </div>
-              )}
-
-              <div className="thuprai-description">
-                <p>{book.descriptionEn}</p>
-                {book.descriptionNp && (
-                  <>
-                    <h4>नेपालीमा विवरण</h4>
-                    <p>{book.descriptionNp}</p>
-                  </>
+                <div className="thuprai-option-subtitle">{book.rent_days} days access</div>
+                {!inCartRent ? (
+                  <div className="thuprai-option-actions">
+                    <div className="thuprai-quantity-selector">
+                      <button onClick={() => setRentQty(Math.max(1, rentQty - 1))}>-</button>
+                      <input type="number" value={rentQty} readOnly />
+                      <button onClick={() => setRentQty(rentQty + 1)}>+</button>
+                    </div>
+                    <button className="thuprai-btn-add-cart-full" onClick={() => addToCart("rent")}>
+                      🛒 Add to cart
+                    </button>
+                  </div>
+                ) : (
+                  <button className="thuprai-btn-pay" onClick={() => payNow("rent")}>Rent now</button>
                 )}
               </div>
             </div>
-          </div>
 
-          {/* Reviews and Ratings Section */}
-          <ReviewSection bookId={id} />
-
-          <div className="thuprai-related-section">
-            <h3>Related Books</h3>
-            <div className="thuprai-related-grid">
-              {relatedBooks.map((relatedBook) => (
-                <Link key={relatedBook.id} to={`/book/${generateSlug(relatedBook.title, relatedBook.id)}`} className="thuprai-related-card">
-                  {getPlaceholderCover(relatedBook, 'medium')}
-                  <div className="related-book-info">
-                    <div className="related-book-title">{relatedBook.title}</div>
-                    <div className="related-book-author">{relatedBook.author}</div>
-                  </div>
-                </Link>
-              ))}
-            </div>
+            {book.description && (
+              <div className="thuprai-description">
+                <p>{book.description}</p>
+              </div>
+            )}
           </div>
         </div>
+
+        <ReviewSection bookId={book.book_id} />
       </div>
-    </>
+    </div>
   );
 }

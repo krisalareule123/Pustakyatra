@@ -89,13 +89,16 @@ export default function Register() {
       };
 
       if (isAuthor) {
-        // Authors: direct registration (no OTP)
         const response = await authorAPI.register(userData);
-        localStorage.setItem("token", response.token);
-        localStorage.setItem("authToken", response.token);
-        localStorage.setItem("userData", JSON.stringify({ ...response.user, role: "author" }));
-        window.dispatchEvent(new Event("userLoggedIn"));
-        navigate("/author/dashboard");
+        if (response.requiresOTP) {
+          setStep("otp");
+          setResendTimer(60);
+        } else {
+          // Fallback: already verified (shouldn't happen on fresh register)
+          localStorage.setItem("authorToken", response.token);
+          localStorage.setItem("authorData", JSON.stringify(response.author));
+          navigate("/author/dashboard");
+        }
       } else {
         // Readers: register → OTP verification required
         const response = await readerAPI.register(userData);
@@ -123,13 +126,19 @@ export default function Register() {
 
     setLoading(true);
     try {
-      const response = await readerAPI.verifyRegisterOTP(form.email.trim(), otp.trim());
-
-      localStorage.setItem("token", response.token);
-      localStorage.setItem("authToken", response.token);
-      localStorage.setItem("userData", JSON.stringify({ ...response.user, role: "reader" }));
-      window.dispatchEvent(new Event("userLoggedIn"));
-      navigate("/dashboard");
+      if (isAuthor) {
+        const response = await authorAPI.verifyEmail(form.email.trim(), otp.trim());
+        localStorage.setItem("authorToken", response.token);
+        localStorage.setItem("authorData", JSON.stringify(response.author));
+        navigate("/author/dashboard");
+      } else {
+        const response = await readerAPI.verifyRegisterOTP(form.email.trim(), otp.trim());
+        localStorage.setItem("token", response.token);
+        localStorage.setItem("authToken", response.token);
+        localStorage.setItem("userData", JSON.stringify({ ...response.user, role: "reader" }));
+        window.dispatchEvent(new Event("userLoggedIn"));
+        navigate("/dashboard");
+      }
     } catch (err) {
       setError(err.message || "Invalid OTP. Please try again.");
     } finally {
@@ -142,20 +151,18 @@ export default function Register() {
     setError("");
     setOtp("");
     try {
-      await readerAPI.register({
-        fullName: form.fullName.trim(),
-        email: form.email.trim(),
-        password: form.password,
-      });
-      setResendTimer(60);
-    } catch {
-      // If account already exists, use resendOTP endpoint
-      try {
-        await readerAPI.resendOTP(form.email.trim(), "email_verification");
-        setResendTimer(60);
-      } catch (err) {
-        setError("Failed to resend OTP. Please try again.");
+      if (isAuthor) {
+        await authorAPI.resendOTP(form.email.trim());
+      } else {
+        try {
+          await readerAPI.register({ fullName: form.fullName.trim(), email: form.email.trim(), password: form.password });
+        } catch {
+          await readerAPI.resendOTP(form.email.trim(), "email_verification");
+        }
       }
+      setResendTimer(60);
+    } catch (err) {
+      setError("Failed to resend OTP. Please try again.");
     }
   }
 
