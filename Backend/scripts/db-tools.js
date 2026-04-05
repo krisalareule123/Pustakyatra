@@ -138,9 +138,79 @@ async function fixPasswords() {
   console.log("\nDone. All authors can log in with: Author@123");
 }
 
+// ── cleanup-draft-orders ──────────────────────────────────────────────────────
+async function cleanupDraftOrders() {
+  const draftItems = await q(`
+    SELECT oi.item_id, oi.order_id, oi.book_title, b.status AS book_status, o.status AS order_status
+    FROM order_items oi
+    JOIN books b ON b.book_id = oi.book_id
+    JOIN orders o ON o.order_id = oi.order_id
+    WHERE b.status = 'draft' OR b.status IS NULL
+  `);
+
+  if (draftItems.length === 0) {
+    console.log("✅ No order_items linked to draft books. Nothing to clean.");
+    return;
+  }
+
+  console.log(`Found ${draftItems.length} order_item(s) linked to draft books:`);
+  draftItems.forEach(r =>
+    console.log(`  item_id:${r.item_id} | order_id:${r.order_id} | book:${r.book_title} | book_status:${r.book_status} | order_status:${r.order_status}`)
+  );
+
+  const itemIds = draftItems.map(r => r.item_id);
+  const del1 = await q(`DELETE FROM order_items WHERE item_id IN (${itemIds.join(",")})`);
+  console.log(`\n🗑  Deleted ${del1.affectedRows} order_item(s) linked to draft books`);
+
+  // Remove orders that are now empty
+  const emptyOrders = await q(`
+    SELECT o.order_id FROM orders o
+    LEFT JOIN order_items oi ON oi.order_id = o.order_id
+    WHERE oi.item_id IS NULL
+  `);
+
+  if (emptyOrders.length > 0) {
+    const orderIds = emptyOrders.map(r => r.order_id);
+    const del2 = await q(`DELETE FROM orders WHERE order_id IN (${orderIds.join(",")})`);
+    console.log(`🗑  Deleted ${del2.affectedRows} empty order(s): [${orderIds.join(", ")}]`);
+  } else {
+    console.log("✅ No empty orders to remove.");
+  }
+
+  console.log("\n✅ Cleanup complete.");
+}
+
+// ── create-notifications ─────────────────────────────────────────────────────
+async function createNotifications() {
+  await new Promise((resolve, reject) => {
+    db.query(`
+      CREATE TABLE IF NOT EXISTS author_notifications (
+        notification_id INT PRIMARY KEY AUTO_INCREMENT,
+        author_id       INT NOT NULL,
+        reader_id       INT NULL,
+        book_id         INT NULL,
+        type            ENUM('purchase','rent','review','favorite') NOT NULL,
+        message         VARCHAR(500) NOT NULL,
+        is_read         TINYINT(1) NOT NULL DEFAULT 0,
+        created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `, (err) => err ? reject(err) : resolve());
+  });
+  // Add reader_id column if it doesn't exist yet
+  await new Promise((resolve) => {
+    db.query("ALTER TABLE author_notifications ADD COLUMN reader_id INT NULL AFTER author_id", (err) => {
+      if (err && err.code !== "ER_DUP_FIELDNAME") console.error("reader_id column:", err.message);
+      resolve();
+    });
+  });
+  console.log("✅ author_notifications table ready");
+}
+
 // ── router ────────────────────────────────────────────────────────────────────
 const commands = { inspect, describe, migrate, "clean-books": cleanBooks,
-                   "fix-book-status": fixBookStatus, "fix-passwords": fixPasswords };
+                   "fix-book-status": fixBookStatus, "fix-passwords": fixPasswords,
+                   "cleanup-draft-orders": cleanupDraftOrders,
+                   "create-notifications": createNotifications };
 
 if (!cmd || !commands[cmd]) {
   console.log("Usage: node Backend/scripts/db-tools.js <command>\n");

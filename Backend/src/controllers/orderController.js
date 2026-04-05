@@ -26,64 +26,78 @@ const createOrder = (req, res) => {
 
     const orderId = generateOrderId();
 
-    // Auto-expire stale pending_payment orders older than 1 hour before creating new one
+    // Step 1: Validate all books are published — reject draft books
+    const bookIds = items.map(item => item.bookId).filter(Boolean);
+    const placeholders = bookIds.map(() => "?").join(",");
+
     db.query(
-      `UPDATE orders SET status = 'failed'
-       WHERE reader_id = ? AND status = 'pending_payment'
-       AND created_at < DATE_SUB(NOW(), INTERVAL 1 HOUR)`,
-      [readerId],
-      () => {} // non-blocking cleanup
-    );
-
-    const insertOrder = `
-      INSERT INTO orders (reader_id, total_amount, status)
-      VALUES (?, ?, 'pending_payment')
-    `;
-
-    db.query(insertOrder, [readerId, totalAmount], (err, result) => {
-      if (err) {
-        console.error("DB error creating order:", err);
-        return res.status(500).json({ success: false, message: "Failed to create order" });
-      }
-
-      const dbOrderId = result.insertId;
-
-      const itemValues = items.map(item => [
-        dbOrderId,
-        item.bookId,
-        item.title,
-        item.type,
-        item.quantity,
-        item.price,
-        item.totalPrice,
-        item.rentDays || null,
-        null // access_expires_at — set after payment confirmed
-      ]);
-
-      const insertItems = `
-        INSERT INTO order_items
-          (order_id, book_id, book_title, item_type, quantity, price, total_price, rent_days, access_expires_at)
-        VALUES ?
-      `;
-
-      db.query(insertItems, [itemValues], (err2) => {
-        if (err2) {
-          console.error("DB error inserting order items:", err2);
-          return res.status(500).json({ success: false, message: "Failed to save order items" });
+      `SELECT book_id, title, status FROM books WHERE book_id IN (${placeholders})`,
+      bookIds,
+      (errB, bookRows) => {
+        if (errB) {
+          return res.status(500).json({ success: false, message: "Failed to validate books" });
+        }
+        const draftBook = bookRows.find(b => b.status !== "published");
+        if (draftBook) {
+          return res.status(400).json({
+            success: false,
+            message: `"${draftBook.title}" is not available for purchase yet.`
+          });
         }
 
-        res.status(201).json({
-          success: true,
-          message: "Order created successfully",
-          order: {
-            orderId: dbOrderId,
-            displayOrderId: orderId,
-            totalAmount,
-            status: "pending_payment"
+        // Step 2: Auto-expire stale pending orders
+        db.query(
+          `UPDATE orders SET status = 'failed'
+           WHERE reader_id = ? AND status = 'pending_payment'
+           AND created_at < DATE_SUB(NOW(), INTERVAL 1 HOUR)`,
+          [readerId], () => {}
+        );
+
+        // Step 3: Create the order
+        db.query(
+          "INSERT INTO orders (reader_id, total_amount, status) VALUES (?, ?, 'pending_payment')",
+          [readerId, totalAmount],
+          (err, result) => {
+            if (err) {
+              console.error("DB error creating order:", err);
+              return res.status(500).json({ success: false, message: "Failed to create order" });
+            }
+
+            const dbOrderId = result.insertId;
+
+            const itemValues = items.map(item => [
+              dbOrderId, item.bookId, item.title, item.type,
+              item.quantity, item.price, item.totalPrice,
+              item.rentDays || null, null
+            ]);
+
+            db.query(
+              `INSERT INTO order_items
+                (order_id, book_id, book_title, item_type, quantity, price, total_price, rent_days, access_expires_at)
+               VALUES ?`,
+              [itemValues],
+              (err2) => {
+                if (err2) {
+                  console.error("DB error inserting order items:", err2);
+                  return res.status(500).json({ success: false, message: "Failed to save order items" });
+                }
+
+                res.status(201).json({
+                  success: true,
+                  message: "Order created successfully",
+                  order: {
+                    orderId: dbOrderId,
+                    displayOrderId: orderId,
+                    totalAmount,
+                    status: "pending_payment"
+                  }
+                });
+              }
+            );
           }
-        });
-      });
-    });
+        );
+      }
+    );
   } catch (error) {
     console.error("Create order error:", error);
     res.status(500).json({ success: false, message: "Server error. Please try again later" });
@@ -464,27 +478,32 @@ const verifyEsewa = async (req, res) => {
               (err3) => { if (err3) console.error("Error granting book access:", err3.message); }
             );
 
-            // Step 7: Notify authors for each purchased/rented book (non-blocking)
+            // Step 7: Notify authors for each purchased/rented book with reader name (non-blocking)
             const { createAuthorNotification } = require("./bookController");
-            db.query(
-              `SELECT oi.book_id, oi.item_type, oi.book_title, b.author_id
-               FROM order_items oi
-               LEFT JOIN books b ON b.book_id = oi.book_id
-               WHERE oi.order_id = ?`,
-              [orderId],
-              (err4, items) => {
-                if (!err4 && items) {
-                  items.forEach(item => {
-                    if (!item.author_id) return;
-                    const type = item.item_type === "rent" ? "rent" : "purchase";
-                    const msg = item.item_type === "rent"
-                      ? `Someone rented "${item.book_title}"`
-                      : `Someone purchased "${item.book_title}"`;
-                    createAuthorNotification(item.author_id, item.book_id, type, msg);
-                  });
+            // Fetch reader name once
+            db.query("SELECT full_name FROM readers WHERE reader_id = ?", [readerId], (errR, readerRows) => {
+              const readerName = (!errR && readerRows?.[0]?.full_name) ? readerRows[0].full_name : "A reader";
+
+              db.query(
+                `SELECT oi.book_id, oi.item_type, oi.book_title, b.author_id
+                 FROM order_items oi
+                 LEFT JOIN books b ON b.book_id = oi.book_id
+                 WHERE oi.order_id = ?`,
+                [orderId],
+                (err4, items) => {
+                  if (!err4 && items) {
+                    items.forEach(item => {
+                      if (!item.author_id) return;
+                      const type = item.item_type === "rent" ? "rent" : "purchase";
+                      const msg  = item.item_type === "rent"
+                        ? `${readerName} rented your book "${item.book_title}"`
+                        : `${readerName} purchased your book "${item.book_title}"`;
+                      createAuthorNotification(item.author_id, item.book_id, type, msg, readerId);
+                    });
+                  }
                 }
-              }
-            );
+              );
+            });
 
             fetchAndReturnOrder(orderId, transaction_code, res);
           }

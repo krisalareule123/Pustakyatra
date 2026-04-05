@@ -10,6 +10,7 @@ export default function MyBooks() {
   const [books, setBooks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [publishing, setPublishing] = useState(null); // bookId being published
 
   const token = localStorage.getItem("authorToken");
 
@@ -28,9 +29,30 @@ export default function MyBooks() {
       .finally(() => setLoading(false));
   }, [token, navigate]);
 
+  const handlePublish = async (bookId) => {
+    setPublishing(bookId);
+    try {
+      const res = await fetch(`${API}/books/${bookId}/publish`, {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        setBooks(prev => prev.map(b =>
+          b.book_id === bookId ? { ...b, status: "published" } : b
+        ));
+      } else {
+        alert(data.message || "Failed to publish");
+      }
+    } catch {
+      alert("Could not connect to server");
+    } finally {
+      setPublishing(null);
+    }
+  };
+
   const handleDelete = async (bookId) => {
     if (!window.confirm("Delete this book? This cannot be undone.")) return;
-    // TODO: add DELETE /api/books/:id endpoint
     setBooks(prev => prev.filter(b => b.book_id !== bookId));
   };
 
@@ -86,6 +108,22 @@ export default function MyBooks() {
                       <td><div className="time-value">{fmtDate(book.created_at)}</div></td>
                       <td>
                         <div className="table-actions">
+                          <button
+                            className="action-btn-small edit"
+                            onClick={() => navigate(`/author/add-book?edit=${book.book_id}`)}
+                          >
+                            Edit
+                          </button>
+                          {book.status === "draft" && (
+                            <button
+                              className="action-btn-small"
+                              style={{ background: "#3b5723", color: "white", border: "none" }}
+                              onClick={() => handlePublish(book.book_id)}
+                              disabled={publishing === book.book_id}
+                            >
+                              {publishing === book.book_id ? "..." : "Publish"}
+                            </button>
+                          )}
                           <button className="action-btn-small delete" onClick={() => handleDelete(book.book_id)}>Delete</button>
                         </div>
                       </td>

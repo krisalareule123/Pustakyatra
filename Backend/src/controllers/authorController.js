@@ -257,6 +257,36 @@ const loginAuthor = async (req, res) => {
   }
 };
 
+// PUT /api/authors/change-password  (protected)
+const changeAuthorPassword = async (req, res) => {
+  try {
+    const authorId = req.user.author_id;
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ success: false, message: "Both current and new password are required" });
+    }
+    if (newPassword.length < 8) {
+      return res.status(400).json({ success: false, message: "New password must be at least 8 characters" });
+    }
+
+    db.query("SELECT password FROM authors WHERE author_id = ?", [authorId], async (err, rows) => {
+      if (err || !rows.length) return res.status(500).json({ success: false, message: "Server error" });
+
+      const valid = await bcrypt.compare(currentPassword, rows[0].password);
+      if (!valid) return res.status(401).json({ success: false, message: "Current password is incorrect" });
+
+      const hashed = await bcrypt.hash(newPassword, 10);
+      db.query("UPDATE authors SET password = ? WHERE author_id = ?", [hashed, authorId], (err2) => {
+        if (err2) return res.status(500).json({ success: false, message: "Failed to update password" });
+        res.status(200).json({ success: true, message: "Password changed successfully" });
+      });
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
 // GET /api/authors/public  — public list of all verified authors with book counts
 function getPublicAuthors(req, res) {
   db.query(
@@ -362,7 +392,7 @@ const updateAuthorProfile = (req, res) => {
   }
 };
 
-module.exports = { registerAuthor, verifyAuthorEmail, resendAuthorOTP, loginAuthor, getAuthorProfile, updateAuthorProfile, getAuthorStats, getAuthorBooks, getNotifications, markNotificationRead, getPublicAuthors, getAuthorPublicBooks };
+module.exports = { registerAuthor, verifyAuthorEmail, resendAuthorOTP, loginAuthor, getAuthorProfile, updateAuthorProfile, changeAuthorPassword, getAuthorStats, getAuthorBook, getAuthorBooks, getAuthorReviews, getNotifications, markNotificationRead, getPublicAuthors, getAuthorPublicBooks };
 
 // GET /api/authors/stats  (protected)
 function getAuthorStats(req, res) {
@@ -401,6 +431,23 @@ function getAuthorStats(req, res) {
   });
 }
 
+// GET /api/authors/books/:bookId  — full book details for edit form
+function getAuthorBook(req, res) {
+  const authorId = req.user.author_id;
+  const { bookId } = req.params;
+  db.query(
+    `SELECT book_id, title, nepali_title, description, category, language,
+            keywords, buy_price, rent_price, rent_days, cover_image, pdf_file, status
+     FROM books WHERE book_id = ? AND author_id = ?`,
+    [bookId, authorId],
+    (err, rows) => {
+      if (err) return res.status(500).json({ success: false, message: "Server error" });
+      if (!rows.length) return res.status(404).json({ success: false, message: "Book not found" });
+      res.status(200).json({ success: true, book: rows[0] });
+    }
+  );
+}
+
 // GET /api/authors/books  (protected — only this author's books)
 function getAuthorBooks(req, res) {
   const authorId = req.user.author_id;
@@ -408,11 +455,11 @@ function getAuthorBooks(req, res) {
     SELECT
       b.book_id, b.title, b.nepali_title, b.status, b.cover_image,
       b.buy_price, b.rent_price, b.created_at,
-      COUNT(DISTINCT oi.order_id) AS sales,
-      COALESCE(SUM(oi.total_price), 0) AS earnings
+      COUNT(DISTINCT CASE WHEN o.status = 'paid' THEN oi.order_id END) AS sales,
+      COALESCE(SUM(CASE WHEN o.status = 'paid' THEN oi.total_price ELSE 0 END), 0) AS earnings
     FROM books b
     LEFT JOIN order_items oi ON oi.book_id = b.book_id
-    LEFT JOIN orders o ON o.order_id = oi.order_id AND o.status = 'paid'
+    LEFT JOIN orders o ON o.order_id = oi.order_id
     WHERE b.author_id = ?
     GROUP BY b.book_id
     ORDER BY b.created_at DESC
@@ -426,13 +473,49 @@ function getAuthorBooks(req, res) {
   });
 }
 
+// GET /api/authors/reviews  — all reviews for this author's books
+function getAuthorReviews(req, res) {
+  const authorId = req.user.author_id;
+  db.query(
+    `SELECT r.review_id, r.book_id, r.rating, r.comment, r.created_at,
+            rd.full_name AS reader_name,
+            b.title AS book_title
+     FROM reviews r
+     JOIN books b ON b.book_id = r.book_id
+     LEFT JOIN readers rd ON rd.reader_id = r.reader_id
+     WHERE b.author_id = ?
+     ORDER BY r.created_at DESC
+     LIMIT 50`,
+    [authorId],
+    (err, rows) => {
+      if (err) return res.status(500).json({ success: false, message: "Server error" });
+
+      // Calculate stats
+      const totalReviews = rows.length;
+      const avgRating = totalReviews > 0
+        ? (rows.reduce((s, r) => s + r.rating, 0) / totalReviews).toFixed(1)
+        : 0;
+      const ratedBooks = new Set(rows.map(r => r.book_id)).size;
+
+      res.status(200).json({
+        success: true,
+        reviews: rows,
+        stats: { totalReviews, avgRating: parseFloat(avgRating), ratedBooks }
+      });
+    }
+  );
+}
+
 // GET /api/authors/notifications  (protected)
 function getNotifications(req, res) {
   const authorId = req.user.author_id;
   db.query(
-    `SELECT notification_id, book_id, type, message, is_read, created_at
-     FROM author_notifications WHERE author_id = ?
-     ORDER BY created_at DESC LIMIT 50`,
+    `SELECT n.notification_id, n.book_id, n.type, n.message, n.is_read, n.created_at,
+            rd.full_name AS reader_name
+     FROM author_notifications n
+     LEFT JOIN readers rd ON rd.reader_id = n.reader_id
+     WHERE n.author_id = ?
+     ORDER BY n.created_at DESC LIMIT 50`,
     [authorId],
     (err, rows) => {
       if (err) return res.status(500).json({ success: false, message: "Server error" });

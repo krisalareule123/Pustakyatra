@@ -21,19 +21,21 @@ export default function Browse() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState(searchParams.get("search") || "");
   const [category, setCategory] = useState(searchParams.get("category") || "");
+  const authorId = searchParams.get("authorId") || "";
 
   useEffect(() => {
     setLoading(true);
     const params = new URLSearchParams();
-    if (search) params.set("search", search);
+    if (search)   params.set("search", search);
     if (category) params.set("category", category);
+    if (authorId) params.set("authorId", authorId);
 
     fetch(`${API}/books?${params}`)
       .then(r => r.json())
       .then(data => { if (data.success) setBooks(data.books); })
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [search, category]);
+  }, [search, category, authorId]);
 
   return (
     <div className="page-container">

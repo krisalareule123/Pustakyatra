@@ -1,19 +1,55 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 const API = "http://localhost:5001/api";
 
 export default function AddBook() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const editId = searchParams.get("edit"); // book_id if editing, null if creating
+
   const [submitting, setSubmitting] = useState(false);
   const [submitMsg, setSubmitMsg] = useState({ type: "", text: "" });
+  const [coverPreview, setCoverPreview] = useState(null);
   const [bookData, setBookData] = useState({
     title: "", nepaliTitle: "", description: "", category: "",
     language: "Nepali", keywords: "", buyPrice: "", rentPrice: "",
-    rentDays: "15", coverImage: null, bookFile: null
+    rentDays: "15", coverImage: null, bookFile: null, existingPdf: null
   });
 
-  const [coverPreview, setCoverPreview] = useState(null);
+  const token = localStorage.getItem("authorToken");
+
+  // Load existing book data when editing
+  useEffect(() => {
+    if (!editId || !token) return;
+
+    fetch(`${API}/authors/books/${editId}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (!data.success || !data.book) return;
+        const b = data.book;
+        setBookData({
+          title:       b.title        || "",
+          nepaliTitle: b.nepali_title || "",
+          description: b.description  || "",
+          category:    b.category     || "",
+          language:    b.language     || "Nepali",
+          keywords:    b.keywords     || "",
+          buyPrice:    b.buy_price    != null ? String(b.buy_price)  : "",
+          rentPrice:   b.rent_price   != null ? String(b.rent_price) : "",
+          rentDays:    b.rent_days    != null ? String(b.rent_days)  : "15",
+          coverImage:  null,
+          bookFile:    null,
+          existingPdf: b.pdf_file     || null,
+        });
+        if (b.cover_image) {
+          setCoverPreview(`http://localhost:5001/${b.cover_image}`);
+        }
+      })
+      .catch(console.error);
+  }, [editId, token]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -24,18 +60,16 @@ export default function AddBook() {
     const { name, files } = e.target;
     if (files?.[0]) {
       setBookData(prev => ({ ...prev, [name]: files[0] }));
-      // Show cover preview
-      if (name === "coverImage") {
-        setCoverPreview(URL.createObjectURL(files[0]));
-      }
+      if (name === "coverImage") setCoverPreview(URL.createObjectURL(files[0]));
     }
   };
 
   const handleSubmit = async (e, forcedStatus) => {
     e.preventDefault();
-    const token = localStorage.getItem("authorToken");
     if (!token) { navigate("/login"); return; }
-    if (!bookData.bookFile) {
+
+    // For new books, PDF is required. For edits, it's optional.
+    if (!editId && !bookData.bookFile) {
       setSubmitMsg({ type: "error", text: "Please upload a PDF book file." });
       return;
     }
@@ -54,13 +88,16 @@ export default function AddBook() {
     formData.append("buyPrice", bookData.buyPrice);
     formData.append("rentPrice", bookData.rentPrice);
     formData.append("rentDays", bookData.rentDays);
-    formData.append("status", status);
+    if (!editId) formData.append("status", status);
     if (bookData.coverImage) formData.append("coverImage", bookData.coverImage);
-    formData.append("bookFile", bookData.bookFile);
+    if (bookData.bookFile)   formData.append("bookFile", bookData.bookFile);
+
+    const url    = editId ? `${API}/books/${editId}/update` : `${API}/books`;
+    const method = editId ? "PUT" : "POST";
 
     try {
-      const res = await fetch(`${API}/books`, {
-        method: "POST",
+      const res = await fetch(url, {
+        method,
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
@@ -68,17 +105,11 @@ export default function AddBook() {
       if (data.success) {
         setSubmitMsg({
           type: "success",
-          text: `Book ${status === "draft" ? "saved as draft" : "published"} successfully!`
+          text: editId ? "Book updated successfully!" : `Book ${status === "draft" ? "saved as draft" : "published"} successfully!`
         });
-        setBookData({
-          title: "", nepaliTitle: "", description: "", category: "",
-          language: "Nepali", keywords: "", buyPrice: "", rentPrice: "",
-          rentDays: "15", coverImage: null, bookFile: null
-        });
-        setCoverPreview(null);
-        setTimeout(() => navigate("/author/books"), 1500);
+        setTimeout(() => navigate("/author/books"), 1200);
       } else {
-        setSubmitMsg({ type: "error", text: data.message || "Failed to publish book." });
+        setSubmitMsg({ type: "error", text: data.message || "Failed to save book." });
       }
     } catch (err) {
       setSubmitMsg({ type: "error", text: "Upload failed: " + err.message });
@@ -90,8 +121,10 @@ export default function AddBook() {
   return (
     <div className="dashboard-workspace">
       <div className="dashboard-header">
-        <h1 className="dashboard-title">Add New Book</h1>
-        <div className="dashboard-date">Upload and publish your book to Pustakyatra</div>
+        <h1 className="dashboard-title">{editId ? "Edit Book" : "Add New Book"}</h1>
+        <div className="dashboard-date">
+          {editId ? "Update your book details" : "Upload and publish your book to Pustakyatra"}
+        </div>
       </div>
 
       {submitMsg.text && (
@@ -193,7 +226,7 @@ export default function AddBook() {
           <h3 className="form-section-title">Files</h3>
           <div className="form-row">
             <div className="form-field">
-              <label htmlFor="coverImage">Cover Image</label>
+              <label htmlFor="coverImage">Cover Image {editId ? "(leave empty to keep current)" : ""}</label>
               <input type="file" id="coverImage" name="coverImage"
                 onChange={handleFileChange} className="form-control-file" accept="image/*" />
               {coverPreview && (
@@ -201,22 +234,22 @@ export default function AddBook() {
                   style={{ marginTop: 8, width: 80, height: 110, objectFit: "cover",
                     borderRadius: 6, border: "1px solid #ddd" }} />
               )}
-              {bookData.coverImage && !coverPreview && (
-                <small style={{ color: "#3b5723", display: "block", marginTop: 4 }}>
-                  ✓ {bookData.coverImage.name}
-                </small>
-              )}
               <small className="form-hint">JPG, PNG. Max 2MB. Recommended: 600x900px</small>
             </div>
             <div className="form-field">
-              <label htmlFor="bookFile">Book PDF *</label>
+              <label htmlFor="bookFile">Book PDF {editId ? "(leave empty to keep current)" : "*"}</label>
               <input type="file" id="bookFile" name="bookFile"
-                onChange={handleFileChange} className="form-control-file" accept=".pdf" required />
-              {bookData.bookFile && (
+                onChange={handleFileChange} className="form-control-file" accept=".pdf"
+                required={!editId} />
+              {bookData.bookFile ? (
                 <small style={{ color: "#3b5723", display: "block", marginTop: 4 }}>
                   ✓ {bookData.bookFile.name} ({(bookData.bookFile.size / 1024 / 1024).toFixed(1)} MB)
                 </small>
-              )}
+              ) : bookData.existingPdf ? (
+                <small style={{ color: "#6c757d", display: "block", marginTop: 4 }}>
+                  Current: {bookData.existingPdf.split("/").pop()}
+                </small>
+              ) : null}
               <small className="form-hint">PDF only. Max 50MB</small>
             </div>
           </div>
@@ -224,12 +257,14 @@ export default function AddBook() {
 
         <div className="form-actions">
           <button type="submit" className="btn-primary" disabled={submitting}>
-            {submitting ? "Publishing..." : "Publish Book"}
+            {submitting ? "Saving..." : editId ? "Save Changes" : "Publish Book"}
           </button>
-          <button type="button" className="btn-secondary" disabled={submitting}
-            onClick={(e) => handleSubmit(e, "draft")}>
-            Save as Draft
-          </button>
+          {!editId && (
+            <button type="button" className="btn-secondary" disabled={submitting}
+              onClick={(e) => handleSubmit(e, "draft")}>
+              Save as Draft
+            </button>
+          )}
           <button type="button" className="btn-text" onClick={() => navigate("/author/books")}>
             Cancel
           </button>

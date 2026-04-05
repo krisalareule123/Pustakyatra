@@ -323,88 +323,97 @@
 /* Book Cover Cards (used in other sections) */
 .coverCard {
   border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  background: #ffffff;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.07), 0 1px 4px rgba(0, 0, 0, 0.04);
   overflow: hidden;
-  padding: 16px;
-  min-height: 180px;
+  padding: 14px;
+  min-height: 200px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  transition: all 0.3s ease;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
   cursor: pointer;
-  backdrop-filter: blur(10px);
   text-decoration: none;
   color: inherit;
 }
 
 .coverCard:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.12),
-    0 4px 16px rgba(0, 0, 0, 0.08);
-  border-color: rgba(59, 87, 35, 0.2);
+  transform: translateY(-6px);
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.13), 0 6px 18px rgba(0, 0, 0, 0.07);
+  border-color: rgba(59, 87, 35, 0.18);
   text-decoration: none;
   color: inherit;
 }
 
 .coverTop {
-  border-radius: 16px;
+  border-radius: 12px;
   background: linear-gradient(
     135deg,
     rgba(59, 87, 35, 0.08) 0%,
     rgba(90, 130, 52, 0.12) 100%
   );
-  border: 1px solid rgba(59, 87, 35, 0.1);
-  padding: 16px;
-  min-height: 100px;
+  border: 1px solid rgba(59, 87, 35, 0.08);
+  padding: 14px;
+  min-height: 150px;
+  height: 150px;
   position: relative;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  overflow: hidden;
+}
+
+/* Image inside coverTop fills perfectly */
+.coverTop img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 12px;
+  display: block;
 }
 
 .coverBadge {
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  display: flex;
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 3;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
+  padding: 3px 10px;
+  border-radius: 20px;
   font-weight: 700;
-  font-size: 14px;
-  color: #3b5723;
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid rgba(59, 87, 35, 0.15);
-  align-self: flex-start;
+  font-size: 10px;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: white;
+  background: #e53e3e;
+  box-shadow: 0 2px 8px rgba(229, 62, 62, 0.45);
+  line-height: 1.5;
 }
 
 .coverPattern {
   position: absolute;
-  bottom: 16px;
-  left: 16px;
-  right: 16px;
+  bottom: 14px;
+  left: 14px;
+  right: 14px;
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
 .patternLine {
-  height: 8px;
+  height: 7px;
   border-radius: 4px;
-  background: rgba(255, 255, 255, 0.8);
-  border: 1px solid rgba(59, 87, 35, 0.1);
+  background: rgba(255, 255, 255, 0.75);
 }
 
-.patternLine:nth-child(1) {
-  width: 75%;
-}
-.patternLine:nth-child(2) {
-  width: 60%;
-}
-.patternLine:nth-child(3) {
-  width: 45%;
-}
+.patternLine:nth-child(1) { width: 75%; }
+.patternLine:nth-child(2) { width: 58%; }
+.patternLine:nth-child(3) { width: 42%; }
 
 .patternDot {
   width: 6px;
@@ -415,26 +424,32 @@
 }
 
 .coverText {
-  padding-top: 16px;
+  padding-top: 12px;
 }
 
 .coverTitle {
-  font-weight: 600;
+  font-weight: 700;
   color: #1a2912;
-  font-size: 15px;
-  line-height: 1.3;
-  margin-bottom: 4px;
+  font-size: 14px;
+  line-height: 1.35;
+  margin-bottom: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .coverSub {
   font-weight: 500;
-  color: rgba(26, 41, 18, 0.7);
-  font-size: 13px;
+  color: rgba(26, 41, 18, 0.55);
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Sections */
 .section {
-  margin-top: 80px;
+  margin-top: 72px;
 }
 
 .sectionHeader {
@@ -442,21 +457,21 @@
   align-items: flex-end;
   justify-content: space-between;
   gap: 24px;
-  margin-bottom: 32px;
+  margin-bottom: 28px;
 }
 
 .sectionTitle h2 {
-  margin: 0 0 8px;
+  margin: 0 0 6px;
   color: #1a2912;
-  font-size: 32px;
-  font-weight: 700;
-  letter-spacing: -0.01em;
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
 }
 
 .sectionSubtitle {
   margin: 0;
-  color: rgba(26, 41, 18, 0.6);
-  font-size: 16px;
+  color: rgba(26, 41, 18, 0.5);
+  font-size: 14px;
   font-weight: 400;
 }
 

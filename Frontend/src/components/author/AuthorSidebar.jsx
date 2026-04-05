@@ -22,6 +22,7 @@ export default function AuthorSidebar() {
     { path: "/author/books", icon: "▤", label: "My Books" },
     { path: "/author/add-book", icon: "+", label: "Add Book" },
     { path: "/author/sales", icon: "₹", label: "Sales & Earnings" },
+    { path: "/author/reviews", icon: "★", label: "Reviews" },
     { path: "/author/profile", icon: "◉", label: "Profile" },
   ];
 

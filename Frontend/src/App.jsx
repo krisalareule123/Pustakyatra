@@ -19,18 +19,29 @@ import Browse from "./pages/Browse";
 import Categories from "./pages/Categories";
 import Authors from "./pages/Authors";
 import About from "./pages/About";
-
 import BookDetails from "./pages/BookDetails.jsx";
-
 import UserDashboard from "./pages/UserDashboard.jsx";
 
-// Author Panel Components
+// Author Panel
 import AuthorLayout from "./components/author/AuthorLayout.jsx";
 import AuthorDashboard from "./pages/author/AuthorDashboard.jsx";
 import MyBooks from "./pages/author/MyBooks.jsx";
 import AddBook from "./pages/author/AddBook.jsx";
 import Sales from "./pages/author/Sales.jsx";
 import AuthorProfile from "./pages/author/AuthorProfile.jsx";
+import AuthorReviews from "./pages/author/Reviews.jsx";
+
+// Admin Panel
+import AdminLogin from "./pages/admin/AdminLogin.jsx";
+import AdminLayout from "./pages/admin/AdminLayout.jsx";
+import AdminDashboard from "./pages/admin/Dashboard.jsx";
+import AdminUsers from "./pages/admin/Users.jsx";
+import AdminAuthors from "./pages/admin/Authors.jsx";
+import AdminBooks from "./pages/admin/Books.jsx";
+import AdminPayments from "./pages/admin/Payments.jsx";
+import AdminReviews from "./pages/admin/Reviews.jsx";
+import AdminNotifications from "./pages/admin/Notifications.jsx";
+import AdminSettings from "./pages/admin/Settings.jsx";
 
 // Author Layout Wrapper Component
 function AuthorLayoutWrapper() {
@@ -52,6 +63,7 @@ export default function App() {
           <Route path="books" element={<MyBooks />} />
           <Route path="add-book" element={<AddBook />} />
           <Route path="sales" element={<Sales />} />
+          <Route path="reviews" element={<AuthorReviews />} />
           <Route path="profile" element={<AuthorProfile />} />
           {/* Catch unknown /author/* paths — redirect to login */}
           <Route path="*" element={<Navigate to="/login" replace />} />
@@ -59,6 +71,21 @@ export default function App() {
 
         {/* Reader page — full screen, no Navbar/Footer */}
         <Route path="/reader/:readToken" element={<Reader />} />
+
+        {/* Admin Panel — separate from reader/author */}
+        <Route path="/admin/login" element={<AdminLogin />} />
+        <Route path="/admin" element={<AdminLayout />}>
+          <Route index element={<Navigate to="/admin/dashboard" replace />} />
+          <Route path="dashboard"     element={<AdminDashboard />} />
+          <Route path="users"         element={<AdminUsers />} />
+          <Route path="authors"       element={<AdminAuthors />} />
+          <Route path="books"         element={<AdminBooks />} />
+          <Route path="payments"      element={<AdminPayments />} />
+          <Route path="reviews"       element={<AdminReviews />} />
+          <Route path="notifications" element={<AdminNotifications />} />
+          <Route path="settings"      element={<AdminSettings />} />
+          <Route path="*"             element={<Navigate to="/admin/dashboard" replace />} />
+        </Route>
 
         {/* Reader Routes with Navbar & Footer */}
         <Route path="*" element={

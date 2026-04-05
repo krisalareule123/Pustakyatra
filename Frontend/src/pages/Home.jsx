@@ -16,15 +16,32 @@ const initials = (title) =>
   title ? title.split(" ").slice(0, 2).map(w => w[0]?.toUpperCase()).join("") : "?";
 
 function CoverCard({ book, badge, index }) {
+  const coverUrl = book.cover_image
+    ? `http://localhost:5001/${book.cover_image}`
+    : null;
+
+  const isStarBadge = badge === "★";
+
   return (
     <Link to={`/book/${book.book_id}`} className="coverCard" title={book.title}>
-      <div className="coverTop" style={{ background: COLORS[index % COLORS.length] }}>
-        <div className="coverBadge">{badge || initials(book.title)}</div>
-        <div className="coverPattern">
-          <div className="patternLine"></div>
-          <div className="patternLine"></div>
-          <div className="patternLine"></div>
-          <div className="patternDot"></div>
+      <div className="coverTop" style={!coverUrl ? { background: COLORS[index % COLORS.length] } : {}}>
+        {coverUrl ? (
+          <img src={coverUrl} alt={book.title} />
+        ) : (
+          <>
+            <div className="coverPattern">
+              <div className="patternLine"></div>
+              <div className="patternLine"></div>
+              <div className="patternLine"></div>
+              <div className="patternDot"></div>
+            </div>
+          </>
+        )}
+        {/* Badge — always shown */}
+        <div className="coverBadge" style={isStarBadge ? {
+          background: "#d97706", boxShadow: "0 2px 8px rgba(217,119,6,0.4)"
+        } : {}}>
+          {badge}
         </div>
       </div>
       <div className="coverText">

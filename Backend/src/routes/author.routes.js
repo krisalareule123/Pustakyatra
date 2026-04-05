@@ -2,8 +2,9 @@ const express = require("express");
 const jwt = require("jsonwebtoken");
 const {
   registerAuthor, verifyAuthorEmail, resendAuthorOTP,
-  loginAuthor, getAuthorProfile, updateAuthorProfile, getAuthorStats, getAuthorBooks,
-  getNotifications, markNotificationRead, getPublicAuthors, getAuthorPublicBooks
+  loginAuthor, getAuthorProfile, updateAuthorProfile, changeAuthorPassword,
+  getAuthorStats, getAuthorBook, getAuthorBooks,
+  getAuthorReviews, getNotifications, markNotificationRead, getPublicAuthors, getAuthorPublicBooks
 } = require("../controllers/authorController");
 
 const router = express.Router();
@@ -36,8 +37,11 @@ router.post("/login", loginAuthor);
 // Protected
 router.get("/me", authAuthor, getAuthorProfile);
 router.put("/me", authAuthor, updateAuthorProfile);
+router.put("/change-password", authAuthor, changeAuthorPassword);
 router.get("/stats", authAuthor, getAuthorStats);
 router.get("/books", authAuthor, getAuthorBooks);
+router.get("/books/:bookId", authAuthor, getAuthorBook);
+router.get("/reviews", authAuthor, getAuthorReviews);
 router.get("/notifications", authAuthor, getNotifications);
 router.patch("/notifications/:id/read", authAuthor, markNotificationRead);
 

@@ -85,16 +85,25 @@ const addReview = async (req, res) => {
             });
           }
 
-          // Notify the book's author (non-blocking)
+          // Notify the book's author with reader name (non-blocking)
           const { createAuthorNotification } = require("./bookController");
-          db.query("SELECT author_id, title FROM books WHERE book_id = ?", [bookId], (e, rows) => {
-            if (!e && rows && rows[0] && rows[0].author_id) {
-              createAuthorNotification(
-                rows[0].author_id, bookId, "review",
-                `New ${rating}-star review on "${rows[0].title}"`
-              );
+          db.query(
+            `SELECT b.author_id, b.title, rd.full_name AS reader_name
+             FROM books b, readers rd
+             WHERE b.book_id = ? AND rd.reader_id = ?`,
+            [bookId, readerId],
+            (e, rows) => {
+              if (!e && rows && rows[0] && rows[0].author_id) {
+                const readerName = rows[0].reader_name || "A reader";
+                const bookTitle  = rows[0].title;
+                createAuthorNotification(
+                  rows[0].author_id, bookId, "review",
+                  `${readerName} gave ${rating}★ review on "${bookTitle}"`,
+                  readerId
+                );
+              }
             }
-          });
+          );
 
           res.status(201).json({
             success: true,

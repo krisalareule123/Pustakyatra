@@ -135,19 +135,37 @@ export default function AuthorDashboard() {
           <p style={{ color: "#888", padding: "16px 0" }}>No notifications yet.</p>
         ) : (
           <div className="activity-feed">
-            {notifications.map(n => (
-              <div
-                key={n.notification_id}
-                className={`activity-row${n.is_read ? "" : " notif-unread"}`}
-                onClick={() => !n.is_read && markRead(n.notification_id)}
-                style={{ cursor: n.is_read ? "default" : "pointer" }}
-              >
-                <div className="activity-info">
-                  <span className="activity-action">{NOTIF_ICONS[n.type] || "🔔"} {n.message}</span>
+            {notifications.map(n => {
+              const icon = NOTIF_ICONS[n.type] || "🔔";
+              return (
+                <div
+                  key={n.notification_id}
+                  className={`activity-row${n.is_read ? "" : " notif-unread"}`}
+                  onClick={() => !n.is_read && markRead(n.notification_id)}
+                  style={{ cursor: n.is_read ? "default" : "pointer" }}
+                >
+                  <div className="activity-info" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontSize: 18, flexShrink: 0 }}>{icon}</span>
+                    <div>
+                      <span className="activity-action" style={{ fontWeight: n.is_read ? 400 : 600 }}>
+                        {n.message}
+                      </span>
+                      {n.reader_name && (
+                        <span style={{ fontSize: 12, color: "#888", marginLeft: 6 }}>
+                          — {n.reader_name}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 3, flexShrink: 0 }}>
+                    <div className="activity-time">{fmtTime(n.created_at)}</div>
+                    {!n.is_read && (
+                      <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#3b5723", display: "block" }} />
+                    )}
+                  </div>
                 </div>
-                <div className="activity-time">{fmtTime(n.created_at)}</div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

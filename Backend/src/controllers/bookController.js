@@ -67,7 +67,62 @@ const createBook = (req, res) => {
   }
 };
 
-// Update PDF for an existing book (author only — uses JWT)
+// Update book details (author only — own books)
+const updateBook = (req, res) => {
+  try {
+    const authorId = req.user.author_id;
+    const { bookId } = req.params;
+    const {
+      title, nepaliTitle, description, category,
+      language, keywords, buyPrice, rentPrice, rentDays
+    } = req.body;
+
+    if (!title || !buyPrice || !rentPrice) {
+      return res.status(400).json({ success: false, message: "title, buyPrice and rentPrice are required" });
+    }
+
+    const coverImage = req.files?.coverImage?.[0]?.filename
+      ? `uploads/covers/${req.files.coverImage[0].filename}`
+      : null;
+
+    const pdfFile = req.files?.bookFile?.[0]?.filename
+      ? `uploads/pdfs/${req.files.bookFile[0].filename}`
+      : null;
+
+    // Build dynamic SET clause — only update files if new ones were uploaded
+    const fields = [
+      "title = ?", "nepali_title = ?", "description = ?", "category = ?",
+      "language = ?", "keywords = ?", "buy_price = ?", "rent_price = ?", "rent_days = ?"
+    ];
+    const values = [
+      title, nepaliTitle || null, description || null, category || null,
+      language || "Nepali", keywords || null,
+      parseFloat(buyPrice), parseFloat(rentPrice), parseInt(rentDays) || 15
+    ];
+
+    if (coverImage) { fields.push("cover_image = ?"); values.push(coverImage); }
+    if (pdfFile)    { fields.push("pdf_file = ?");    values.push(pdfFile); }
+
+    values.push(bookId, authorId); // for WHERE clause
+
+    db.query(
+      `UPDATE books SET ${fields.join(", ")} WHERE book_id = ? AND author_id = ?`,
+      values,
+      (err, result) => {
+        if (err) {
+          console.error("updateBook DB error:", err.message);
+          return res.status(500).json({ success: false, message: "Failed to update book" });
+        }
+        if (result.affectedRows === 0) {
+          return res.status(404).json({ success: false, message: "Book not found or not yours" });
+        }
+        res.status(200).json({ success: true, message: "Book updated successfully" });
+      }
+    );
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
 const updateBookPdf = (req, res) => {
   try {
     const { bookId } = req.params;
@@ -108,12 +163,13 @@ const updateBookPdf = (req, res) => {
 // Get all published books (public) — includes real author name via JOIN
 const getBooks = (req, res) => {
   try {
-    const { category, language, search } = req.query;
+    const { category, language, search, authorId } = req.query;
     let where = "WHERE (b.status = 'published' OR b.status IS NULL)";
     const params = [];
 
-    if (category) { where += " AND b.category = ?"; params.push(category); }
-    if (language) { where += " AND b.language = ?"; params.push(language); }
+    if (authorId) { where += " AND b.author_id = ?"; params.push(parseInt(authorId)); }
+    if (category)  { where += " AND b.category = ?"; params.push(category); }
+    if (language)  { where += " AND b.language = ?"; params.push(language); }
     if (search) {
       where += " AND (b.title LIKE ? OR b.nepali_title LIKE ? OR b.description LIKE ?)";
       params.push(`%${search}%`, `%${search}%`, `%${search}%`);
@@ -258,13 +314,39 @@ const downloadPdf = (req, res) => {
 
 module.exports = { createBook, updateBookPdf, getBooks, getBook, servePdf, downloadPdf };
 
+// Publish a draft book (author only)
+const publishBook = (req, res) => {
+  try {
+    const authorId = req.user.author_id;
+    const { bookId } = req.params;
+
+    db.query(
+      "UPDATE books SET status = 'published' WHERE book_id = ? AND author_id = ?",
+      [bookId, authorId],
+      (err, result) => {
+        if (err) {
+          console.error("publishBook DB error:", err.message);
+          return res.status(500).json({ success: false, message: "Server error" });
+        }
+        if (result.affectedRows === 0) {
+          return res.status(404).json({ success: false, message: "Book not found or not yours" });
+        }
+        res.status(200).json({ success: true, message: "Book published successfully" });
+      }
+    );
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
 // Helper: create a notification for an author (called from other controllers)
-function createAuthorNotification(authorId, bookId, type, message) {
+// readerId is optional — pass null if not available
+function createAuthorNotification(authorId, bookId, type, message, readerId = null) {
   db.query(
-    "INSERT INTO author_notifications (author_id, book_id, type, message) VALUES (?, ?, ?, ?)",
-    [authorId, bookId || null, type, message],
+    "INSERT INTO author_notifications (author_id, reader_id, book_id, type, message) VALUES (?, ?, ?, ?, ?)",
+    [authorId, readerId || null, bookId || null, type, message],
     (err) => { if (err) console.error("Notification insert error:", err.message); }
   );
 }
 
-module.exports = { createBook, updateBookPdf, getBooks, getBook, servePdf, downloadPdf, createAuthorNotification };
+module.exports = { createBook, updateBook, updateBookPdf, publishBook, getBooks, getBook, servePdf, downloadPdf, createAuthorNotification };
