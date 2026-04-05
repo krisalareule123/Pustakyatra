@@ -77,7 +77,7 @@ const registerReader = async (req, res) => {
         // Send OTP email — await so we can log failures clearly
         try {
           await sendOTPEmail(email, fullName, otp);
-          console.log("✅ OTP email sent to:", email);
+          console.log("✅ OTP email sent to:", email, otp);
         } catch (emailErr) {
           console.error("❌ OTP email failed:", emailErr.message);
           // Don't block registration — user can resend OTP

@@ -9,6 +9,7 @@ const NAV = [
   { path: "/admin/books",          icon: "📚", label: "Books" },
   { path: "/admin/payments",       icon: "💳", label: "Payments" },
   { path: "/admin/reviews",        icon: "⭐", label: "Reviews" },
+  { path: "/admin/analytics",      icon: "📈", label: "Analytics" },
   { path: "/admin/notifications",  icon: "🔔", label: "Notifications" },
   { path: "/admin/settings",       icon: "⚙️", label: "Settings" },
 ];
@@ -20,6 +21,7 @@ const PAGE_META = {
   "/admin/books":         { title: "Books",          sub: "Manage all uploaded books" },
   "/admin/payments":      { title: "Payments",       sub: "View all transactions and revenue" },
   "/admin/reviews":       { title: "Reviews",        sub: "Moderate reader reviews" },
+  "/admin/analytics":     { title: "Analytics",      sub: "Platform performance metrics and insights" },
   "/admin/notifications": { title: "Notifications",  sub: "System activity and alerts" },
   "/admin/settings":      { title: "Settings",       sub: "Admin preferences and configuration" },
 };
@@ -60,12 +62,15 @@ export default function AdminLayout() {
               {item.label}
             </button>
           ))}
-          <div className="admin-nav-divider" />
+        </nav>
+
+        <div className="admin-sidebar-footer">
+          <div className="admin-nav-divider" style={{ margin: "0 0 8px" }} />
           <button className="admin-nav-item" onClick={handleLogout}>
             <span className="admin-nav-icon">→</span>
             Sign Out
           </button>
-        </nav>
+        </div>
       </aside>
 
       {/* Main */}

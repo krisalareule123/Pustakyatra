@@ -206,11 +206,19 @@ async function createNotifications() {
   console.log("✅ author_notifications table ready");
 }
 
+// ── fix-admin-password ────────────────────────────────────────────────────────
+async function fixAdminPassword() {
+  const hash = await bcrypt.hash("Admin@2025", 10);
+  const result = await q("UPDATE admins SET password = ? WHERE email = ?", [hash, "admin@pustakyatra.com"]);
+  if (result.affectedRows === 0) console.warn("⚠️  No admin found with that email");
+  else console.log("✅ Admin password hashed successfully");
+}
 // ── router ────────────────────────────────────────────────────────────────────
 const commands = { inspect, describe, migrate, "clean-books": cleanBooks,
                    "fix-book-status": fixBookStatus, "fix-passwords": fixPasswords,
                    "cleanup-draft-orders": cleanupDraftOrders,
-                   "create-notifications": createNotifications };
+                   "create-notifications": createNotifications,
+                   "fix-admin-password": fixAdminPassword };
 
 if (!cmd || !commands[cmd]) {
   console.log("Usage: node Backend/scripts/db-tools.js <command>\n");

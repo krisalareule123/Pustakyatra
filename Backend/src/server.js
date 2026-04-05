@@ -7,6 +7,7 @@ const reviewRoutes = require("./routes/review.routes");
 const orderRoutes = require("./routes/order.routes");
 const bookRoutes = require("./routes/book.routes");
 const authorRoutes = require("./routes/author.routes");
+const adminRoutes = require("./routes/admin.routes");
 
 dotenv.config();
 
@@ -26,6 +27,7 @@ app.use("/api/reviews", reviewRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/books", bookRoutes);
 app.use("/api/authors", authorRoutes);
+app.use("/api/admin", adminRoutes);
 
 app.get("/", (req, res) => {
   res.json({

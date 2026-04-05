@@ -42,6 +42,7 @@ import AdminPayments from "./pages/admin/Payments.jsx";
 import AdminReviews from "./pages/admin/Reviews.jsx";
 import AdminNotifications from "./pages/admin/Notifications.jsx";
 import AdminSettings from "./pages/admin/Settings.jsx";
+import AdminAnalytics from "./pages/admin/Analytics.jsx";
 
 // Author Layout Wrapper Component
 function AuthorLayoutWrapper() {
@@ -82,6 +83,7 @@ export default function App() {
           <Route path="books"         element={<AdminBooks />} />
           <Route path="payments"      element={<AdminPayments />} />
           <Route path="reviews"       element={<AdminReviews />} />
+          <Route path="analytics"     element={<AdminAnalytics />} />
           <Route path="notifications" element={<AdminNotifications />} />
           <Route path="settings"      element={<AdminSettings />} />
           <Route path="*"             element={<Navigate to="/admin/dashboard" replace />} />
