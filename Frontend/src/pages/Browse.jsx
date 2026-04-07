@@ -83,6 +83,11 @@ export default function Browse() {
       </section>
 
       <section className="content-section">
+        {authorId && (
+          <button className="back-btn" onClick={() => navigate(-1)}>
+            Back to Authors
+          </button>
+        )}
         <div className="section-header">
           <h2 className="section-title">
             {loading ? "Loading..." : books.length === 0 ? "No books available yet" : `${books.length} Book${books.length !== 1 ? "s" : ""}`}

@@ -18,12 +18,9 @@ const initials = (title) =>
 export default function BookDetails() {
   const { bookId } = useParams();
   const navigate = useNavigate();
-
   const [book, setBook] = useState(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
-  const [buyQty, setBuyQty] = useState(1);
-  const [rentQty, setRentQty] = useState(1);
   const [inCartBuy, setInCartBuy] = useState(false);
   const [inCartRent, setInCartRent] = useState(false);
 
@@ -53,22 +50,21 @@ export default function BookDetails() {
   }, [bookId]);
 
   const addToCart = (type) => {
-    const qty = type === "buy" ? buyQty : rentQty;
     const price = type === "buy" ? book.buy_price : book.rent_price;
     const item = {
       bookId: book.book_id,
       title: book.title,
       author: book.author_name,
       type,
-      quantity: qty,
+      quantity: 1,
       price: parseFloat(price),
-      totalPrice: parseFloat(price) * qty,
+      totalPrice: parseFloat(price),
       rentDays: type === "rent" ? book.rent_days : null,
     };
     const cart = JSON.parse(localStorage.getItem("cart") || "[]");
     const idx = cart.findIndex(i => String(i.bookId) === String(book.book_id) && i.type === type);
     if (idx > -1) {
-      cart[idx].quantity += qty;
+      cart[idx].quantity += 1;
       cart[idx].totalPrice = cart[idx].price * cart[idx].quantity;
     } else {
       cart.push(item);
@@ -81,16 +77,15 @@ export default function BookDetails() {
   const payNow = (type) => {
     const token = localStorage.getItem("token") || localStorage.getItem("authToken");
     if (!token) { navigate("/login"); return; }
-    const qty = type === "buy" ? buyQty : rentQty;
     const price = type === "buy" ? book.buy_price : book.rent_price;
     const item = {
       bookId: book.book_id,
       title: book.title,
       author: book.author_name,
       type,
-      quantity: qty,
+      quantity: 1,
       price: parseFloat(price),
-      totalPrice: parseFloat(price) * qty,
+      totalPrice: parseFloat(price),
       rentDays: type === "rent" ? book.rent_days : null,
     };
     navigate("/payment", { state: { items: [item], totalAmount: item.totalPrice } });
@@ -121,6 +116,7 @@ export default function BookDetails() {
   return (
     <div className="thuprai-page">
       <div className="thuprai-container">
+        <button className="back-btn" onClick={() => navigate(-1)}>Back to Browse</button>
         <div className="thuprai-breadcrumb">
           <Link to="/">Home</Link><span>/</span>
           <Link to="/browse">Books</Link><span>/</span>
@@ -168,51 +164,55 @@ export default function BookDetails() {
               by <strong>{book.author_name || "Unknown Author"}</strong>
             </div>
 
-            {/* Buy option */}
-            <div className="thuprai-purchase-options">
-              <div className="thuprai-option-card">
-                <div className="thuprai-option-header">
-                  <span className="thuprai-option-type">E-book (Buy)</span>
-                  <span className="thuprai-option-price">Rs {book.buy_price}</span>
-                </div>
-                {!inCartBuy ? (
-                  <div className="thuprai-option-actions">
-                    <div className="thuprai-quantity-selector">
-                      <button onClick={() => setBuyQty(Math.max(1, buyQty - 1))}>-</button>
-                      <input type="number" value={buyQty} readOnly />
-                      <button onClick={() => setBuyQty(buyQty + 1)}>+</button>
-                    </div>
-                    <button className="thuprai-btn-add-cart-full" onClick={() => addToCart("buy")}>
-                      🛒 Add to cart
+            {/* Purchase options — side by side */}
+            <div className="pk-options-row">
+
+              {/* Buy card */}
+              <div className="pk-action-card">
+                <div className="pk-action-label">E-book</div>
+                <div className="pk-action-price">Rs {parseFloat(book.buy_price).toLocaleString()}</div>
+                <div className="pk-action-note">Permanent access</div>
+                <div className="pk-action-buttons">
+                  {!inCartBuy ? (
+                    <>
+                      <button className="pk-btn-cart" onClick={() => addToCart("buy")}>
+                        Add to cart
+                      </button>
+                      <button className="pk-btn-read" onClick={() => payNow("buy")}>
+                        Read now
+                      </button>
+                    </>
+                  ) : (
+                    <button className="pk-btn-pay" onClick={() => payNow("buy")}>
+                      Pay now
                     </button>
-                  </div>
-                ) : (
-                  <button className="thuprai-btn-pay" onClick={() => payNow("buy")}>Pay now</button>
-                )}
+                  )}
+                </div>
               </div>
 
-              {/* Rent option */}
-              <div className="thuprai-option-card">
-                <div className="thuprai-option-header">
-                  <span className="thuprai-option-type">E-book (Rent)</span>
-                  <span className="thuprai-option-price">Rs {book.rent_price}</span>
-                </div>
-                <div className="thuprai-option-subtitle">{book.rent_days} days access</div>
-                {!inCartRent ? (
-                  <div className="thuprai-option-actions">
-                    <div className="thuprai-quantity-selector">
-                      <button onClick={() => setRentQty(Math.max(1, rentQty - 1))}>-</button>
-                      <input type="number" value={rentQty} readOnly />
-                      <button onClick={() => setRentQty(rentQty + 1)}>+</button>
-                    </div>
-                    <button className="thuprai-btn-add-cart-full" onClick={() => addToCart("rent")}>
-                      🛒 Add to cart
+              {/* Rent card */}
+              <div className="pk-action-card">
+                <div className="pk-action-label">E-book (Rent)</div>
+                <div className="pk-action-price">Rs {parseFloat(book.rent_price).toLocaleString()}</div>
+                <div className="pk-action-note">{book.rent_days} days access</div>
+                <div className="pk-action-buttons">
+                  {!inCartRent ? (
+                    <>
+                      <button className="pk-btn-cart" onClick={() => addToCart("rent")}>
+                        Add to cart
+                      </button>
+                      <button className="pk-btn-read" onClick={() => payNow("rent")}>
+                        Read now
+                      </button>
+                    </>
+                  ) : (
+                    <button className="pk-btn-pay" onClick={() => payNow("rent")}>
+                      Pay now
                     </button>
-                  </div>
-                ) : (
-                  <button className="thuprai-btn-pay" onClick={() => payNow("rent")}>Rent now</button>
-                )}
+                  )}
+                </div>
               </div>
+
             </div>
 
             {book.description && (

@@ -156,6 +156,10 @@ export default function Payment() {
 
   return (
     <div className="payment-page">
+      <button className="back-btn" onClick={() => navigate(-1)}
+        style={{ marginLeft: 24, marginTop: 8 }}>
+        Back
+      </button>
       <div className="payment-container">
 
         {/* LEFT: Payment Method */}
