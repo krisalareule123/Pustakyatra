@@ -1,5 +1,5 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import "./Navbar.css";
 
 const NAV_LINKS = [
@@ -13,12 +13,10 @@ const NAV_LINKS = [
 export default function Navbar() {
   const navigate    = useNavigate();
   const location    = useLocation();
-  const dropdownRef = useRef(null);
 
-  const [isLoggedIn,    setIsLoggedIn]    = useState(false);
-  const [user,          setUser]          = useState(null);
-  const [showDropdown,  setShowDropdown]  = useState(false);
-  const [cartCount,     setCartCount]     = useState(0);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [user,       setUser]       = useState(null);
+  const [cartCount,  setCartCount]  = useState(0);
 
   // Auth state
   useEffect(() => {
@@ -59,16 +57,6 @@ export default function Navbar() {
     };
   }, []);
 
-  // Close dropdown on outside click
-  useEffect(() => {
-    const handler = (e) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-        setShowDropdown(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -76,7 +64,6 @@ export default function Navbar() {
     localStorage.removeItem("userData");
     setIsLoggedIn(false);
     setUser(null);
-    setShowDropdown(false);
     window.dispatchEvent(new Event("userLoggedOut"));
     navigate("/");
   };
@@ -125,47 +112,15 @@ export default function Navbar() {
 
           {/* Auth */}
           {isLoggedIn ? (
-            <div className="profile-dropdown" ref={dropdownRef}>
-              <button
-                type="button"
-                className="profile-btn"
-                onClick={() => setShowDropdown(v => !v)}
-              >
-                <div className="profile-avatar">
-                  <img
-                    src="https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=100&auto=format&fit=crop&q=60"
-                    alt="Profile"
-                  />
-                </div>
-                <span className="profile-name">{user?.fullName || "User"}</span>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
-                  className={`dropdown-arrow ${showDropdown ? "open" : ""}`}>
-                  <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2"
-                    strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </button>
-
-              {showDropdown && (
-                <div className="profile-menu">
-                  {[
-                    { to: "/dashboard",  icon: "▣", label: "Dashboard"  },
-                    { to: "/my-orders",  icon: "📋", label: "My Orders"  },
-                    { to: "/my-library", icon: "📚", label: "My Library" },
-                  ].map(item => (
-                    <Link key={item.to} to={item.to} className="profile-menu-item"
-                      onClick={() => setShowDropdown(false)}>
-                      <span style={{ fontSize: 15 }}>{item.icon}</span>
-                      {item.label}
-                    </Link>
-                  ))}
-                  <div className="profile-menu-divider" />
-                  <button type="button" className="profile-menu-item logout" onClick={handleLogout}>
-                    <span style={{ fontSize: 15 }}>→</span>
-                    Logout
-                  </button>
-                </div>
-              )}
-            </div>
+            <Link to="/dashboard" className="profile-btn" style={{ textDecoration: "none" }}>
+              <div className="profile-avatar">
+                <img
+                  src="https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=100&auto=format&fit=crop&q=60"
+                  alt="Profile"
+                />
+              </div>
+              <span className="profile-name">{user?.fullName || "User"}</span>
+            </Link>
           ) : (
             <Link to="/login" className="login-btn">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none">

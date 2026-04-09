@@ -122,6 +122,10 @@ const verifyAuthorEmail = (req, res) => {
             // Send welcome email after successful verification (non-blocking)
             sendAuthorWelcomeEmail(author.email, author.full_name).catch(() => {});
 
+            // Notify admin of new author (non-blocking)
+            const { createAdminNotification } = require("./adminController");
+            createAdminNotification("author_new", `New author registered: ${author.full_name}`, author.author_id);
+
             const token = signToken(author);
 
             res.status(200).json({

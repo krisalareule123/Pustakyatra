@@ -87,6 +87,7 @@ const addReview = async (req, res) => {
 
           // Notify the book's author with reader name (non-blocking)
           const { createAuthorNotification } = require("./bookController");
+          const { createAdminNotification }  = require("./adminController");
           db.query(
             `SELECT b.author_id, b.title, rd.full_name AS reader_name
              FROM books b, readers rd
@@ -101,6 +102,9 @@ const addReview = async (req, res) => {
                   `${readerName} gave ${rating}★ review on "${bookTitle}"`,
                   readerId
                 );
+                // Notify admin too
+                createAdminNotification("review_new",
+                  `${readerName} submitted a ${rating}★ review on "${bookTitle}"`, bookId);
               }
             }
           );

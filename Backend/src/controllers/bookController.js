@@ -60,6 +60,13 @@ const createBook = (req, res) => {
         pdfFile,
         coverImage
       });
+
+      // Notify admin (non-blocking)
+      const { createAdminNotification } = require("./adminController");
+      const notifMsg = bookStatus === "draft"
+        ? `New book draft saved: "${title}"`
+        : `New book uploaded: "${title}"`;
+      createAdminNotification("book_new", notifMsg, result.insertId);
     });
   } catch (error) {
     console.error("createBook error:", error);
@@ -332,6 +339,14 @@ const publishBook = (req, res) => {
           return res.status(404).json({ success: false, message: "Book not found or not yours" });
         }
         res.status(200).json({ success: true, message: "Book published successfully" });
+
+        // Notify admin (non-blocking)
+        const { createAdminNotification } = require("./adminController");
+        db.query("SELECT title FROM books WHERE book_id = ?", [bookId], (e, rows) => {
+          if (!e && rows?.[0]) {
+            createAdminNotification("book_publish", `Book published: "${rows[0].title}"`, parseInt(bookId));
+          }
+        });
       }
     );
   } catch (error) {

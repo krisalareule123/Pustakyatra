@@ -1,7 +1,6 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { orderAPI } from "../services/api";
-import { mockBooks } from "../data/mockBooks.js";
 import "./Reader.css";
 
 const API_BASE = "http://localhost:5001/api";
@@ -38,10 +37,7 @@ export default function Reader() {
         }
 
         setAccess(res);
-
-        // Enrich with mock data for author name etc.
-        const found = mockBooks.find((b) => String(b.id) === String(res.bookId));
-        setBook(found || { title: res.bookTitle, author: null });
+        setBook({ title: res.bookTitle, author: res.authorName || null });
 
         // If backend has a real PDF, fetch it as a blob (so auth header is sent)
         if (res.pdfReadUrl) {

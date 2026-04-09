@@ -74,6 +74,10 @@ const registerReader = async (req, res) => {
 
         console.log("✅ Reader registered. Sending verification OTP to:", email);
 
+        // Notify admin of new reader registration (non-blocking)
+        const { createAdminNotification } = require("./adminController");
+        createAdminNotification("user_new", `New reader registered: ${trimmedName}`);
+
         // Send OTP email — await so we can log failures clearly
         try {
           await sendOTPEmail(email, fullName, otp);

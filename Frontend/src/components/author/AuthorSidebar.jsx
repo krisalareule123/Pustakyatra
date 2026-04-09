@@ -18,12 +18,13 @@ export default function AuthorSidebar() {
   };
 
   const menuItems = [
-    { path: "/author/dashboard", icon: "▣", label: "Dashboard" },
-    { path: "/author/books", icon: "▤", label: "My Books" },
-    { path: "/author/add-book", icon: "+", label: "Add Book" },
-    { path: "/author/sales", icon: "₹", label: "Sales & Earnings" },
-    { path: "/author/reviews", icon: "★", label: "Reviews" },
-    { path: "/author/profile", icon: "◉", label: "Profile" },
+    { path: "/author/dashboard",      icon: "▣", label: "Dashboard"       },
+    { path: "/author/books",          icon: "▤", label: "My Books"        },
+    { path: "/author/add-book",       icon: "+", label: "Add Book"        },
+    { path: "/author/sales",          icon: "₹", label: "Sales & Earnings"},
+    { path: "/author/reviews",        icon: "★", label: "Reviews"         },
+    { path: "/author/notifications",  icon: "🔔", label: "Notifications"  },
+    { path: "/author/profile",        icon: "◉", label: "Profile"         },
   ];
 
   return (

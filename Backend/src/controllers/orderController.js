@@ -478,8 +478,9 @@ const verifyEsewa = async (req, res) => {
               (err3) => { if (err3) console.error("Error granting book access:", err3.message); }
             );
 
-            // Step 7: Notify authors for each purchased/rented book with reader name (non-blocking)
+            // Step 7: Notify authors + admin for each purchased/rented book (non-blocking)
             const { createAuthorNotification } = require("./bookController");
+            const { createAdminNotification }  = require("./adminController");
             // Fetch reader name once
             db.query("SELECT full_name FROM readers WHERE reader_id = ?", [readerId], (errR, readerRows) => {
               const readerName = (!errR && readerRows?.[0]?.full_name) ? readerRows[0].full_name : "A reader";
@@ -499,6 +500,12 @@ const verifyEsewa = async (req, res) => {
                         ? `${readerName} rented your book "${item.book_title}"`
                         : `${readerName} purchased your book "${item.book_title}"`;
                       createAuthorNotification(item.author_id, item.book_id, type, msg, readerId);
+
+                      // Also notify admin
+                      const adminMsg = item.item_type === "rent"
+                        ? `${readerName} rented "${item.book_title}"`
+                        : `${readerName} purchased "${item.book_title}"`;
+                      createAdminNotification(type, adminMsg, item.book_id);
                     });
                   }
                 }
@@ -690,10 +697,12 @@ const resolveReadToken = (req, res) => {
         oi.book_id, oi.book_title, oi.item_type,
         oi.rent_days, oi.access_expires_at,
         o.order_id, o.paid_at,
-        b.pdf_file, b.title AS db_title
+        b.pdf_file, b.title AS db_title,
+        a.full_name AS author_name
       FROM orders o
       JOIN order_items oi ON o.order_id = oi.order_id
       LEFT JOIN books b ON b.book_id = oi.book_id
+      LEFT JOIN authors a ON a.author_id = b.author_id
       WHERE o.reader_id = ? AND oi.book_id = ? AND o.status = 'paid'
         AND (oi.item_type = 'buy' OR (oi.item_type = 'rent' AND oi.access_expires_at > NOW()))
       ORDER BY o.paid_at DESC
@@ -734,6 +743,7 @@ const resolveReadToken = (req, res) => {
         success: true,
         bookId: row.book_id,
         bookTitle: row.db_title || row.book_title,
+        authorName: row.author_name || null,
         accessType: row.item_type,
         rentExpiresAt: row.access_expires_at,
         remainingDays,

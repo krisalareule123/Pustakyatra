@@ -165,4 +165,94 @@ const getRecentActivity = (req, res) => {
   );
 };
 
-module.exports = { adminLogin, getAdminProfile, getDashboardStats, getRecentActivity };
+// GET /api/admin/analytics  (protected)
+const getAnalytics = (req, res) => {
+  const queries = {
+    // Summary
+    totalUsers:    "SELECT COUNT(*) AS val FROM readers",
+    totalAuthors:  "SELECT COUNT(*) AS val FROM authors WHERE is_verified = 1",
+    totalBooks:    "SELECT COUNT(*) AS val FROM books",
+    totalOrders:   "SELECT COUNT(*) AS val FROM orders WHERE status = 'paid'",
+    totalRevenue:  "SELECT COALESCE(SUM(total_amount), 0) AS val FROM orders WHERE status = 'paid'",
+    totalReviews:  "SELECT COUNT(*) AS val FROM reviews",
+
+    // Buy vs Rent
+    buyOrders:  "SELECT COUNT(*) AS val FROM order_items oi JOIN orders o ON o.order_id = oi.order_id WHERE o.status = 'paid' AND oi.item_type = 'buy'",
+    rentOrders: "SELECT COUNT(*) AS val FROM order_items oi JOIN orders o ON o.order_id = oi.order_id WHERE o.status = 'paid' AND oi.item_type = 'rent'",
+
+    // Rating distribution
+    r5: "SELECT COUNT(*) AS val FROM reviews WHERE rating = 5",
+    r4: "SELECT COUNT(*) AS val FROM reviews WHERE rating = 4",
+    r3: "SELECT COUNT(*) AS val FROM reviews WHERE rating = 3",
+    r2: "SELECT COUNT(*) AS val FROM reviews WHERE rating = 2",
+    r1: "SELECT COUNT(*) AS val FROM reviews WHERE rating = 1",
+
+    // Published vs Draft
+    publishedBooks: "SELECT COUNT(*) AS val FROM books WHERE status = 'published'",
+    draftBooks:     "SELECT COUNT(*) AS val FROM books WHERE status = 'draft'",
+  };
+
+  const keys = Object.keys(queries);
+  const results = {};
+  let done = 0;
+
+  keys.forEach(key => {
+    db.query(queries[key], (err, rows) => {
+      results[key] = err ? 0 : (parseFloat(rows[0].val) || 0);
+      if (++done === keys.length) {
+        res.status(200).json({ success: true, analytics: results });
+      }
+    });
+  });
+};
+
+// ── Admin notification helper (called from other controllers) ──────────────────
+const createAdminNotification = (type, message, relatedId = null) => {
+  db.query(
+    "INSERT INTO admin_notifications (type, message, related_id) VALUES (?, ?, ?)",
+    [type, message, relatedId],
+    (err) => { if (err) console.error("Admin notification insert error:", err.message); }
+  );
+};
+
+// GET /api/admin/notifications  (protected)
+const getAdminNotifications = (req, res) => {
+  db.query(
+    `SELECT notification_id, type, message, related_id, is_read, created_at
+     FROM admin_notifications
+     ORDER BY created_at DESC
+     LIMIT 100`,
+    (err, rows) => {
+      if (err) return res.status(500).json({ success: false, message: "Server error" });
+      const unread = rows.filter(r => !r.is_read).length;
+      res.status(200).json({ success: true, notifications: rows, unread });
+    }
+  );
+};
+
+// PATCH /api/admin/notifications/read-all  (protected)
+const markAllAdminNotificationsRead = (req, res) => {
+  db.query("UPDATE admin_notifications SET is_read = 1 WHERE is_read = 0", (err) => {
+    if (err) return res.status(500).json({ success: false, message: "Server error" });
+    res.status(200).json({ success: true });
+  });
+};
+
+// PATCH /api/admin/notifications/:id/read  (protected)
+const markAdminNotificationRead = (req, res) => {
+  db.query(
+    "UPDATE admin_notifications SET is_read = 1 WHERE notification_id = ?",
+    [req.params.id],
+    (err) => {
+      if (err) return res.status(500).json({ success: false, message: "Server error" });
+      res.status(200).json({ success: true });
+    }
+  );
+};
+
+module.exports = {
+  adminLogin, getAdminProfile, getDashboardStats, getRecentActivity,
+  getAnalytics,
+  getAdminNotifications, markAllAdminNotificationsRead, markAdminNotificationRead,
+  createAdminNotification
+};

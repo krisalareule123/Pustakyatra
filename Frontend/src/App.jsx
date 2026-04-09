@@ -30,6 +30,7 @@ import AddBook from "./pages/author/AddBook.jsx";
 import Sales from "./pages/author/Sales.jsx";
 import AuthorProfile from "./pages/author/AuthorProfile.jsx";
 import AuthorReviews from "./pages/author/Reviews.jsx";
+import AuthorNotifications from "./pages/author/Notifications.jsx";
 
 // Admin Panel
 import AdminLogin from "./pages/admin/AdminLogin.jsx";
@@ -64,8 +65,9 @@ export default function App() {
           <Route path="books" element={<MyBooks />} />
           <Route path="add-book" element={<AddBook />} />
           <Route path="sales" element={<Sales />} />
-          <Route path="reviews" element={<AuthorReviews />} />
-          <Route path="profile" element={<AuthorProfile />} />
+          <Route path="reviews"       element={<AuthorReviews />} />
+          <Route path="notifications" element={<AuthorNotifications />} />
+          <Route path="profile"       element={<AuthorProfile />} />
           {/* Catch unknown /author/* paths — redirect to login */}
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Route>

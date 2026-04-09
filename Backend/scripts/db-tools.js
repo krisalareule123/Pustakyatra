@@ -180,6 +180,23 @@ async function cleanupDraftOrders() {
   console.log("\n✅ Cleanup complete.");
 }
 
+// ── create-admin-notifications ────────────────────────────────────────────────
+async function createAdminNotifications() {
+  await new Promise((resolve, reject) => {
+    db.query(`
+      CREATE TABLE IF NOT EXISTS admin_notifications (
+        notification_id INT PRIMARY KEY AUTO_INCREMENT,
+        type            VARCHAR(50) NOT NULL,
+        message         VARCHAR(500) NOT NULL,
+        related_id      INT NULL,
+        is_read         TINYINT(1) NOT NULL DEFAULT 0,
+        created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `, (err) => err ? reject(err) : resolve());
+  });
+  console.log("✅ admin_notifications table ready");
+}
+
 // ── create-notifications ─────────────────────────────────────────────────────
 async function createNotifications() {
   await new Promise((resolve, reject) => {
@@ -218,6 +235,7 @@ const commands = { inspect, describe, migrate, "clean-books": cleanBooks,
                    "fix-book-status": fixBookStatus, "fix-passwords": fixPasswords,
                    "cleanup-draft-orders": cleanupDraftOrders,
                    "create-notifications": createNotifications,
+                   "create-admin-notifications": createAdminNotifications,
                    "fix-admin-password": fixAdminPassword };
 
 if (!cmd || !commands[cmd]) {
