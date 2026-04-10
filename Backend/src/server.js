@@ -20,6 +20,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Serve uploaded cover images publicly (covers are not sensitive)
 app.use("/uploads/covers", express.static(path.join(__dirname, "../uploads/covers")));
+app.use("/uploads/avatars", express.static(path.join(__dirname, "../uploads/avatars")));
 // NOTE: PDFs are NOT served statically — they go through the protected /api/books/:id/read endpoint
 
 app.use("/api/readers", readerRoutes);

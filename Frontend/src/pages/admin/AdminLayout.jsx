@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useLocation, Outlet } from "react-router-dom";
 import "./AdminLayout.css";
 
@@ -30,6 +30,31 @@ export default function AdminLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const meta = PAGE_META[location.pathname] || { title: "Admin", sub: "" };
+  const [badges, setBadges] = useState({ reviews: 0, notifications: 0 });
+
+  // Guard — redirect to login if no token
+  useEffect(() => {
+    const token = localStorage.getItem("adminToken");
+    if (!token) { navigate("/admin/login", { replace: true }); return; }
+
+    // Fetch badge counts
+    const h = { Authorization: `Bearer ${token}` };
+    const fetchBadges = () => {
+      Promise.all([
+        fetch("http://localhost:5001/api/admin/reviews",       { headers: h }).then(r => r.json()).catch(() => null),
+        fetch("http://localhost:5001/api/admin/notifications", { headers: h }).then(r => r.json()).catch(() => null),
+      ]).then(([rev, notif]) => {
+        setBadges({
+          reviews:       rev?.reviews?.filter(r => r.status === "pending").length || 0,
+          notifications: notif?.unread || 0,
+        });
+      });
+    };
+    fetchBadges();
+    const id = setInterval(fetchBadges, 60000);
+    window.addEventListener("adminBadgeRefresh", fetchBadges);
+    return () => { clearInterval(id); window.removeEventListener("adminBadgeRefresh", fetchBadges); };
+  }, [navigate]);
 
   const handleLogout = () => {
     localStorage.removeItem("adminToken");
@@ -52,16 +77,30 @@ export default function AdminLayout() {
         </div>
 
         <nav className="admin-nav">
-          {NAV.map(item => (
-            <button
-              key={item.path}
-              className={`admin-nav-item ${location.pathname === item.path ? "active" : ""}`}
-              onClick={() => navigate(item.path)}
-            >
-              <span className="admin-nav-icon">{item.icon}</span>
-              {item.label}
-            </button>
-          ))}
+          {NAV.map(item => {
+            const badge = item.path === "/admin/reviews" ? badges.reviews
+                        : item.path === "/admin/notifications" ? badges.notifications
+                        : 0;
+            return (
+              <button
+                key={item.path}
+                className={`admin-nav-item ${location.pathname === item.path ? "active" : ""}`}
+                onClick={() => navigate(item.path)}
+              >
+                <span className="admin-nav-icon">{item.icon}</span>
+                {item.label}
+                {badge > 0 && (
+                  <span style={{
+                    marginLeft: "auto", minWidth: 18, height: 18,
+                    background: location.pathname === item.path ? "rgba(255,255,255,0.3)" : "#e53e3e",
+                    color: "white", borderRadius: 20, fontSize: 10, fontWeight: 800,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    padding: "0 5px",
+                  }}>{badge}</span>
+                )}
+              </button>
+            );
+          })}
         </nav>
 
         <div className="admin-sidebar-footer">

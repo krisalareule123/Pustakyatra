@@ -57,28 +57,9 @@ export default function Footer() {
             </ul>
           </div>
 
-          {/* Newsletter Column */}
+          {/* Contact Column */}
           <div className="footer-column footer-newsletter">
-            <h3 className="column-title">Stay Connected</h3>
-            <p className="newsletter-desc">
-              Get updates on new books, author spotlights, and literary events in Nepal.
-            </p>
-            <form className="newsletter-form" onSubmit={(e) => e.preventDefault()}>
-              <div className="newsletter-input-group">
-                <input 
-                  type="email" 
-                  placeholder="Enter your email"
-                  className="newsletter-input"
-                />
-                <button type="submit" className="newsletter-btn">
-                  Subscribe
-                </button>
-              </div>
-              <p className="newsletter-note">
-                We respect your privacy. Unsubscribe anytime.
-              </p>
-            </form>
-            
+            <h3 className="column-title">Contact Us</h3>
             <div className="contact-info">
               <div className="contact-item">
                 <span className="contact-icon">📍</span>
@@ -86,7 +67,7 @@ export default function Footer() {
               </div>
               <div className="contact-item">
                 <span className="contact-icon">📧</span>
-                <span>hello@pustakyatra.com</span>
+                <span>pustakyatra072@gmail.com</span>
               </div>
             </div>
           </div>

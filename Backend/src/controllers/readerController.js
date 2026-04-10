@@ -211,6 +211,9 @@ const loginReader = async (req, res) => {
         { expiresIn: "7d" }
       );
 
+      // Mark as active on login
+      db.query("UPDATE readers SET is_active = 1 WHERE reader_id = ?", [user.reader_id], () => {});
+
       res.status(200).json({
         success: true,
         message: "Login successful! Welcome back.",
@@ -301,7 +304,7 @@ const getReaderProfile = (req, res) => {
     const userId = req.user.reader_id;
 
     const query = `
-      SELECT reader_id, full_name, email, phone, address, is_verified, created_at
+      SELECT reader_id, full_name, email, phone, address, is_verified, is_active, last_seen, profile_image, created_at
       FROM readers
       WHERE reader_id = ?
     `;
@@ -333,6 +336,9 @@ const getReaderProfile = (req, res) => {
           phone: user.phone,
           address: user.address,
           emailVerified: user.is_verified,
+          isActive: user.is_active,
+          isOnline: user.is_active === 1,
+          profileImage: user.profile_image || null,
           createdAt: user.created_at
         }
       });
@@ -845,6 +851,132 @@ const resendOTP = async (req, res) => {
   }
 };
 
+// GET /api/readers/notifications — computed from order data
+const getReaderNotifications = (req, res) => {
+  const readerId = req.user.reader_id;
+
+  db.query(
+    `SELECT o.order_id, o.total_amount, o.paid_at,
+            oi.book_title, oi.item_type, oi.rent_days, oi.access_expires_at
+     FROM orders o
+     JOIN order_items oi ON oi.order_id = o.order_id
+     WHERE o.reader_id = ? AND o.status = 'paid'
+     ORDER BY o.paid_at DESC`,
+    [readerId],
+    (err, rows) => {
+      if (err) return res.status(500).json({ success: false, message: "Server error" });
+
+      const now = new Date();
+      const notifications = [];
+
+      rows.forEach(row => {
+        const isRent = row.item_type === "rent";
+        const paidAt = row.paid_at;
+
+        // Payment confirmed notification
+        notifications.push({
+          id: `pay_${row.order_id}_${row.book_title}`,
+          type: "payment",
+          icon: "💳",
+          title: "Payment Confirmed",
+          message: `Your payment of Rs ${parseFloat(row.total_amount).toLocaleString()} for "${row.book_title}" was successful.`,
+          time: paidAt,
+          color: "#1e6b35",
+          bg: "#e6f4ea",
+        });
+
+        if (isRent && row.access_expires_at) {
+          const expires = new Date(row.access_expires_at);
+          const diffMs = expires - now;
+          const daysLeft = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+          if (daysLeft <= 0) {
+            // Expired
+            notifications.push({
+              id: `expired_${row.order_id}_${row.book_title}`,
+              type: "expired",
+              icon: "⛔",
+              title: "Rental Expired",
+              message: `Your rental access for "${row.book_title}" has expired. Renew to continue reading.`,
+              time: expires,
+              color: "#b91c1c",
+              bg: "#fde8e8",
+            });
+          } else if (daysLeft <= 3) {
+            // Expiring soon
+            notifications.push({
+              id: `expiring_${row.order_id}_${row.book_title}`,
+              type: "expiring",
+              icon: "⚠️",
+              title: "Rental Expiring Soon",
+              message: `"${row.book_title}" rental expires in ${daysLeft} day${daysLeft !== 1 ? "s" : ""}. Renew soon to keep access.`,
+              time: expires,
+              color: "#b45309",
+              bg: "#fff8e1",
+            });
+          } else {
+            // Active rental
+            notifications.push({
+              id: `rent_${row.order_id}_${row.book_title}`,
+              type: "rent",
+              icon: "📖",
+              title: "Rental Active",
+              message: `"${row.book_title}" — ${daysLeft} day${daysLeft !== 1 ? "s" : ""} remaining until ${expires.toLocaleDateString("en-NP", { month: "short", day: "numeric", year: "numeric" })}.`,
+              time: paidAt,
+              color: "#1a56db",
+              bg: "#e8f0fe",
+            });
+          }
+        }
+      });
+
+      // Sort: expired/expiring first, then by time desc
+      const priority = { expired: 0, expiring: 1, rent: 2, payment: 3 };
+      notifications.sort((a, b) => (priority[a.type] ?? 9) - (priority[b.type] ?? 9) || new Date(b.time) - new Date(a.time));
+
+      res.status(200).json({ success: true, notifications });
+    }
+  );
+};
+
+// GET /api/readers/stats — reader's personal stats
+const getReaderStats = (req, res) => {
+  const readerId = req.user.reader_id;
+  const results = {};
+  let done = 0;
+  const finish = () => { if (++done === 5) res.status(200).json({ success: true, stats: results }); };
+
+  // Total books in library (paid orders)
+  db.query(
+    "SELECT COUNT(*) AS val FROM order_items oi JOIN orders o ON o.order_id = oi.order_id WHERE o.reader_id = ? AND o.status = 'paid'",
+    [readerId], (err, rows) => { results.totalBooks = err ? 0 : (rows[0].val || 0); finish(); }
+  );
+  // Total orders
+  db.query(
+    "SELECT COUNT(*) AS val FROM orders WHERE reader_id = ? AND status = 'paid'",
+    [readerId], (err, rows) => { results.totalOrders = err ? 0 : (rows[0].val || 0); finish(); }
+  );
+  // Total spent
+  db.query(
+    "SELECT COALESCE(SUM(total_amount), 0) AS val FROM orders WHERE reader_id = ? AND status = 'paid'",
+    [readerId], (err, rows) => { results.totalSpent = err ? 0 : (parseFloat(rows[0].val) || 0); finish(); }
+  );
+  // Active rentals
+  db.query(
+    "SELECT COUNT(*) AS val FROM order_items oi JOIN orders o ON o.order_id = oi.order_id WHERE o.reader_id = ? AND o.status = 'paid' AND oi.item_type = 'rent' AND oi.access_expires_at > NOW()",
+    [readerId], (err, rows) => { results.activeRentals = err ? 0 : (rows[0].val || 0); finish(); }
+  );
+  // Recent orders (last 3)
+  db.query(
+    `SELECT o.order_id, o.total_amount, o.paid_at, oi.book_title, oi.item_type
+     FROM orders o
+     JOIN order_items oi ON oi.order_id = o.order_id
+     WHERE o.reader_id = ? AND o.status = 'paid'
+     ORDER BY o.paid_at DESC LIMIT 3`,
+    [readerId], (err, rows) => { results.recentOrders = err ? [] : rows; finish(); }
+  );
+};
+
 module.exports = {
   registerReader,
   verifyRegisterOTP,
@@ -856,5 +988,7 @@ module.exports = {
   forgotPassword,
   resetPassword,
   verifyEmail,
-  resendOTP
+  resendOTP,
+  getReaderStats,
+  getReaderNotifications
 };

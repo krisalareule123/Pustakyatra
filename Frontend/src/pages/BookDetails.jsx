@@ -5,6 +5,10 @@ import "./Pages.css";
 
 const API = "http://localhost:5001/api";
 
+// Creates URL-friendly slug: "Muna Madan" + id 4 → "muna-madan-4"
+export const bookSlug = (title, id) =>
+  `${(title || "book").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}-${id}`;
+
 const COLORS = [
   "linear-gradient(135deg,#3b5723,#4a6b2a)",
   "linear-gradient(135deg,#2d4a1a,#3b5723)",
@@ -18,6 +22,9 @@ const initials = (title) =>
 export default function BookDetails() {
   const { bookId } = useParams();
   const navigate = useNavigate();
+
+  // Support slug format "muna-madan-4" — extract numeric ID from end
+  const realId = bookId?.match(/(\d+)$/)?.[1] || bookId;
   const [book, setBook] = useState(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -26,8 +33,8 @@ export default function BookDetails() {
 
   // Load book from real API
   useEffect(() => {
-    if (!bookId) return;
-    fetch(`${API}/books/${bookId}`)
+    if (!realId) return;
+    fetch(`${API}/books/${realId}`)
       .then(r => r.json())
       .then(data => {
         if (data.success) setBook(data.book);
@@ -35,19 +42,19 @@ export default function BookDetails() {
       })
       .catch(() => setNotFound(true))
       .finally(() => setLoading(false));
-  }, [bookId]);
+  }, [realId]);
 
   // Sync cart state
   useEffect(() => {
     const sync = () => {
       const cart = JSON.parse(localStorage.getItem("cart") || "[]");
-      setInCartBuy(cart.some(i => String(i.bookId) === String(bookId) && i.type === "buy"));
-      setInCartRent(cart.some(i => String(i.bookId) === String(bookId) && i.type === "rent"));
+      setInCartBuy(cart.some(i => String(i.bookId) === String(realId) && i.type === "buy"));
+      setInCartRent(cart.some(i => String(i.bookId) === String(realId) && i.type === "rent"));
     };
     sync();
     window.addEventListener("cartUpdated", sync);
     return () => window.removeEventListener("cartUpdated", sync);
-  }, [bookId]);
+  }, [realId]);
 
   const addToCart = (type) => {
     const price = type === "buy" ? book.buy_price : book.rent_price;

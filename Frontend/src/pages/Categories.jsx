@@ -1,69 +1,86 @@
-import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import "./Pages.css";
+
+const API = "http://localhost:5001/api/books";
 
 const mainCategories = [
   {
-    id: 1,
-    name: "Nepali Classics",
-    description: "Timeless masterpieces that shaped Nepali literature",
-    icon: "📚",
-    bookCount: 156,
-    color: "#8B4513",
-    featured: ["Basain", "Sirishko Phool", "Shirish Ko Phool"]
-  },
-  {
-    id: 2,
     name: "Contemporary Fiction",
     description: "Modern stories reflecting today's Nepal",
     icon: "📖",
-    bookCount: 324,
     color: "#2E8B57",
-    featured: ["Palpasa Café", "Karnali Blues", "Seto Dharati"]
+    featured: ["Summer Love", "Ijoriya"],
+    browse: "Fiction",
   },
   {
-    id: 3,
     name: "Poetry & Literature",
     description: "Beautiful verses from Nepal's finest poets",
     icon: "🪶",
-    bookCount: 89,
     color: "#4682B4",
-    featured: ["Muna Madan", "Gaine Geet", "Madhav Ghimire"]
+    featured: ["Muna Madan"],
+    browse: "Poetry",
   },
   {
-    id: 4,
+    name: "Self-Help",
+    description: "Wisdom and guidance for personal growth",
+    icon: "💡",
+    color: "#9370DB",
+    featured: ["Test Data"],
+    browse: "Self-Help",
+  },
+  {
     name: "Historical Works",
     description: "Chronicles of Nepal's rich past and culture",
     icon: "🏛️",
-    bookCount: 67,
     color: "#CD853F",
-    featured: ["Nepal Ko Itihas", "Prithvi Narayan", "Bhimsen Thapa"]
+    featured: [],
+    browse: "History",
   },
   {
-    id: 5,
     name: "Philosophy & Spirituality",
     description: "Wisdom and spiritual insights from Nepali thinkers",
     icon: "🧘",
-    bookCount: 45,
     color: "#9370DB",
-    featured: ["Buddha Dharma", "Vedanta", "Yoga Shastra"]
+    featured: [],
+    browse: "Philosophy",
   },
   {
-    id: 6,
     name: "Children & Young Adult",
     description: "Stories that inspire and educate young minds",
     icon: "🌟",
-    bookCount: 78,
     color: "#FF6347",
-    featured: ["Bal Sahitya", "Fairy Tales", "Adventure Stories"]
-  }
+    featured: [],
+    browse: "Children",
+  },
 ];
 
 const quickCategories = [
-  "Romance", "Adventure", "Biography", "Science", "Travel", "Cooking", 
+  "Romance", "Adventure", "Biography", "Science", "Travel", "Cooking",
   "Art", "Music", "Politics", "Economics", "Health", "Technology"
 ];
 
 export default function Categories() {
+  const navigate = useNavigate();
+  const [counts, setCounts] = useState({});
+
+  useEffect(() => {
+    fetch(`${API}?status=published`)
+      .then(r => r.json())
+      .then(d => {
+        if (!d.success) return;
+        const map = {};
+        d.books.forEach(b => {
+          const cat = b.category || "";
+          if (cat) map[cat] = (map[cat] || 0) + 1;
+        });
+        setCounts(map);
+      })
+      .catch(() => {});
+  }, []);
+
+  const goTo = (cat) => navigate(`/browse?category=${encodeURIComponent(cat)}`);
+
   return (
     <div className="page-container">
       {/* Hero Section */}
@@ -82,10 +99,9 @@ export default function Categories() {
             Find Books by <span className="title-highlight">Genre</span>
           </h1>
           <p className="hero-subtitle">
-            Browse our carefully organized collection. From timeless classics to contemporary 
+            Browse our carefully organized collection. From timeless classics to contemporary
             works, discover books that match your interests and reading preferences.
           </p>
-          
           <div className="hero-actions">
             <Link to="/browse" className="btn-primary">
               Browse All Books
@@ -93,9 +109,7 @@ export default function Categories() {
                 <path d="M5 12h14m-7-7l7 7-7 7" stroke="currentColor" strokeWidth="2"/>
               </svg>
             </Link>
-            <Link to="/authors" className="btn-outline">
-              Meet Authors
-            </Link>
+            <Link to="/authors" className="btn-outline">Meet Authors</Link>
           </div>
         </div>
       </section>
@@ -108,44 +122,49 @@ export default function Categories() {
         </div>
 
         <div className="categories-grid">
-          {mainCategories.map((category) => (
-            <div key={category.id} className="category-tile">
-              <div className="category-header">
-                <div 
-                  className="category-icon"
-                  style={{ backgroundColor: `${category.color}15`, color: category.color }}
-                >
-                  {category.icon}
-                </div>
-                <div className="category-count">{category.bookCount} books</div>
-              </div>
-              
-              <div className="category-content">
-                <h3 className="category-name">{category.name}</h3>
-                <p className="category-description">{category.description}</p>
-                
-                <div className="category-featured">
-                  <span className="featured-label">Popular:</span>
-                  <div className="featured-books">
-                    {category.featured.map((book, index) => (
-                      <span key={index} className="featured-book">
-                        {book}
-                      </span>
-                    ))}
+          {mainCategories.map((category) => {
+            const bookCount = counts[category.browse] || counts[category.name] || 0;
+            return (
+              <div key={category.name} className="category-tile"
+                style={{ cursor: "pointer" }} onClick={() => goTo(category.browse)}>
+                <div className="category-header">
+                  <div className="category-icon"
+                    style={{ backgroundColor: `${category.color}15`, color: category.color }}>
+                    {category.icon}
+                  </div>
+                  <div className="category-count">
+                    {bookCount > 0 ? `${bookCount} books` : ""}
                   </div>
                 </div>
-              </div>
 
-              <div className="category-footer">
-                <button className="category-btn">
-                  Explore Collection
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                    <path d="M5 12h14m-7-7l7 7-7 7" stroke="currentColor" strokeWidth="2"/>
-                  </svg>
-                </button>
+                <div className="category-content">
+                  <h3 className="category-name">{category.name}</h3>
+                  <p className="category-description">{category.description}</p>
+
+                  {category.featured.length > 0 && (
+                    <div className="category-featured">
+                      <span className="featured-label">Popular:</span>
+                      <div className="featured-books">
+                        {category.featured.map((book, index) => (
+                          <span key={index} className="featured-book">{book}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="category-footer">
+                  <button className="category-btn"
+                    onClick={e => { e.stopPropagation(); goTo(category.browse); }}>
+                    Explore Collection
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                      <path d="M5 12h14m-7-7l7 7-7 7" stroke="currentColor" strokeWidth="2"/>
+                    </svg>
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </section>
 
@@ -155,10 +174,9 @@ export default function Categories() {
           <h2 className="section-title">Quick Browse</h2>
           <p className="section-subtitle">Jump to specific topics and themes</p>
         </div>
-
         <div className="quick-categories">
           {quickCategories.map((category) => (
-            <button key={category} className="quick-category">
+            <button key={category} className="quick-category" onClick={() => goTo(category)}>
               {category}
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
                 <path d="M5 12h14m-7-7l7 7-7 7" stroke="currentColor" strokeWidth="2"/>
@@ -175,31 +193,26 @@ export default function Categories() {
             <div className="collection-badge">Editor's Choice</div>
             <h2 className="collection-title">Nepali Literature Essentials</h2>
             <p className="collection-description">
-              A curated selection of must-read books that define Nepali literature. 
+              A curated selection of must-read books that define Nepali literature.
               Perfect for readers new to Nepali books or those looking to explore the classics.
             </p>
             <div className="collection-stats">
               <div className="stat">
-                <span className="stat-number">25</span>
-                <span className="stat-label">Essential Books</span>
+                <span className="stat-number">{Object.values(counts).reduce((a, b) => a + b, 0) || "—"}</span>
+                <span className="stat-label">Published Books</span>
               </div>
               <div className="stat">
-                <span className="stat-number">4.8</span>
-                <span className="stat-label">Avg Rating</span>
-              </div>
-              <div className="stat">
-                <span className="stat-number">5k+</span>
-                <span className="stat-label">Readers</span>
+                <span className="stat-number">{Object.keys(counts).length || "—"}</span>
+                <span className="stat-label">Categories</span>
               </div>
             </div>
             <div className="collection-actions">
-              <button className="btn-primary">
-                View Collection
+              <button className="btn-primary" onClick={() => navigate("/browse")}>
+                View All Books
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                   <path d="M5 12h14m-7-7l7 7-7 7" stroke="currentColor" strokeWidth="2"/>
                 </svg>
               </button>
-              <button className="btn-outline">Learn More</button>
             </div>
           </div>
           <div className="collection-visual">

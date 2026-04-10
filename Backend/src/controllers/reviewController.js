@@ -157,7 +157,7 @@ const getReviewsByBook = async (req, res) => {
         rd.full_name as reader_name
       FROM reviews r
       LEFT JOIN readers rd ON r.reader_id = rd.reader_id
-      WHERE r.book_id = ?
+      WHERE r.book_id = ? AND r.status = 'visible'
       ORDER BY r.created_at DESC
     `;
 

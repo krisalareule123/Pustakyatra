@@ -11,7 +11,15 @@ export default function AuthorSidebar() {
   const authorName = authorData.fullName || "Author";
   const authorInitial = authorName.charAt(0).toUpperCase();
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    const token = localStorage.getItem("authorToken");
+    if (token) {
+      try {
+        await fetch("http://localhost:5001/api/authors/logout", {
+          method: "POST", headers: { Authorization: `Bearer ${token}` }
+        });
+      } catch (_) {}
+    }
     localStorage.removeItem("authorToken");
     localStorage.removeItem("authorData");
     navigate("/");

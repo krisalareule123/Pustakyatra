@@ -54,6 +54,7 @@ export default function AdminNotifications() {
       method: "PATCH", headers: { Authorization: `Bearer ${token}` }
     });
     setNotifs(prev => prev.map(n => n.notification_id === id ? { ...n, is_read: 1 } : n));
+    window.dispatchEvent(new Event("adminBadgeRefresh"));
   };
 
   const markAll = async () => {
@@ -61,6 +62,7 @@ export default function AdminNotifications() {
       method: "PATCH", headers: { Authorization: `Bearer ${token}` }
     });
     setNotifs(prev => prev.map(n => ({ ...n, is_read: 1 })));
+    window.dispatchEvent(new Event("adminBadgeRefresh"));
   };
 
   const dismiss = (id) => setNotifs(prev => prev.filter(n => n.notification_id !== id));

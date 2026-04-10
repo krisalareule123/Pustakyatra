@@ -206,6 +206,205 @@ const getAnalytics = (req, res) => {
   });
 };
 
+// GET /api/admin/payments  (protected)
+const getPayments = (req, res) => {
+  db.query(
+    `SELECT o.order_id, o.total_amount, o.status, o.paid_at, o.created_at,
+            o.transaction_code,
+            r.full_name AS reader_name,
+            oi.book_title, oi.item_type
+     FROM orders o
+     JOIN readers r ON r.reader_id = o.reader_id
+     LEFT JOIN order_items oi ON oi.order_id = o.order_id
+     WHERE o.status = 'paid'
+     ORDER BY o.paid_at DESC
+     LIMIT 100`,
+    (err, rows) => {
+      if (err) return res.status(500).json({ success: false, message: "Server error" });
+      const totalRevenue = rows
+        .filter(r => r.status === "paid")
+        .reduce((s, r) => s + parseFloat(r.total_amount || 0), 0);
+      res.status(200).json({
+        success: true,
+        totalRevenue,
+        payments: rows.map(r => ({
+          id:        r.order_id,
+          txCode:    r.transaction_code || "—",
+          reader:    r.reader_name,
+          book:      r.book_title || "—",
+          type:      r.item_type || "—",
+          amount:    parseFloat(r.total_amount),
+          status:    r.status,
+          date:      r.paid_at || r.created_at,
+        }))
+      });
+    }
+  );
+};
+
+// GET /api/admin/books  (protected)
+const getBooks = (req, res) => {
+  db.query(
+    `SELECT b.book_id, b.title, b.category, b.buy_price, b.rent_price,
+            b.status, b.created_at,
+            a.full_name AS author_name
+     FROM books b
+     LEFT JOIN authors a ON a.author_id = b.author_id
+     ORDER BY b.created_at DESC`,
+    (err, rows) => {
+      if (err) return res.status(500).json({ success: false, message: "Server error" });
+      res.status(200).json({
+        success: true,
+        books: rows.map(r => ({
+          id:        r.book_id,
+          title:     r.title,
+          author:    r.author_name || "Unknown",
+          category:  r.category,
+          buyPrice:  r.buy_price,
+          rentPrice: r.rent_price,
+          status:    r.status,
+          uploaded:  r.created_at,
+        }))
+      });
+    }
+  );
+};
+
+// PATCH /api/admin/books/:id/publish  (protected)
+const publishBook = (req, res) => {
+  db.query("UPDATE books SET status = 'published' WHERE book_id = ?", [req.params.id], (err) => {
+    if (err) return res.status(500).json({ success: false, message: "Server error" });
+    res.json({ success: true });
+  });
+};
+
+// PATCH /api/admin/books/:id/hide  (protected)
+const hideBook = (req, res) => {
+  db.query("UPDATE books SET status = 'draft' WHERE book_id = ?", [req.params.id], (err) => {
+    if (err) return res.status(500).json({ success: false, message: "Server error" });
+    res.json({ success: true });
+  });
+};
+
+// GET /api/admin/authors  (protected)
+const getAuthors = (req, res) => {
+  db.query(
+    `SELECT a.author_id, a.full_name, a.email, a.last_seen, a.created_at,
+            COUNT(b.book_id) AS total_books,
+            SUM(b.status = 'published') AS published_books,
+            SUM(b.status = 'draft') AS draft_books
+     FROM authors a
+     LEFT JOIN books b ON b.author_id = a.author_id
+     WHERE a.is_verified = 1
+     GROUP BY a.author_id
+     ORDER BY a.created_at DESC`,
+    (err, rows) => {
+      if (err) return res.status(500).json({ success: false, message: "Server error" });
+      const now = new Date();
+      res.status(200).json({
+        success: true,
+        authors: rows.map(r => ({
+          id:        r.author_id,
+          name:      r.full_name,
+          email:     r.email,
+          isActive:  r.last_seen ? (now - new Date(r.last_seen)) < 5 * 60 * 1000 : false,
+          books:     r.total_books || 0,
+          published: r.published_books || 0,
+          drafts:    r.draft_books || 0,
+          joined:    r.created_at,
+        }))
+      });
+    }
+  );
+};
+
+// GET /api/admin/users  (protected)
+const getUsers = (req, res) => {
+  db.query(
+    `SELECT reader_id, full_name, email, phone, is_active, is_blocked, last_seen, created_at,
+            (SELECT COUNT(*) FROM orders o WHERE o.reader_id = readers.reader_id AND o.status = 'paid') AS order_count
+     FROM readers
+     ORDER BY created_at DESC`,
+    (err, rows) => {
+      if (err) return res.status(500).json({ success: false, message: "Server error" });
+      const now = new Date();
+      res.status(200).json({
+        success: true,
+        users: rows.map(r => {
+          // Active = last_seen within 2 minutes
+          const isOnline = r.last_seen
+            ? (now - new Date(r.last_seen)) < 2 * 60 * 1000
+            : false;
+          return {
+            id:        r.reader_id,
+            name:      r.full_name,
+            email:     r.email,
+            phone:     r.phone,
+            isActive:  isOnline,
+            isBlocked: r.is_blocked,
+            orders:    r.order_count,
+            joined:    r.created_at,
+          };
+        })
+      });
+    }
+  );
+};
+
+// PATCH /api/admin/users/:id/toggle  (protected)
+const toggleUserStatus = (req, res) => {
+  const { id } = req.params;
+  db.query("SELECT is_blocked, full_name FROM readers WHERE reader_id = ?", [id], (err, rows) => {
+    if (err || !rows.length) return res.status(404).json({ success: false, message: "User not found" });
+    const newStatus = rows[0].is_blocked ? 0 : 1;
+    db.query("UPDATE readers SET is_blocked = ? WHERE reader_id = ?", [newStatus, id], (err2) => {
+      if (err2) return res.status(500).json({ success: false, message: "Server error" });
+      createAdminNotification(
+        newStatus ? "user_blocked" : "user_unblocked",
+        `Reader "${rows[0].full_name}" was ${newStatus ? "blocked" : "unblocked"} by admin.`,
+        id
+      );
+      res.status(200).json({ success: true, isBlocked: newStatus });
+    });
+  });
+};
+
+// GET /api/admin/reviews  (protected)
+const getAdminReviews = (req, res) => {
+  db.query(
+    `SELECT r.review_id, r.rating, r.comment, r.status, r.created_at,
+            rd.full_name AS reader_name,
+            b.title AS book_title
+     FROM reviews r
+     JOIN readers rd ON rd.reader_id = r.reader_id
+     JOIN books b ON b.book_id = r.book_id
+     ORDER BY r.created_at DESC`,
+    (err, rows) => {
+      if (err) return res.status(500).json({ success: false, message: "Server error" });
+      res.status(200).json({ success: true, reviews: rows });
+    }
+  );
+};
+
+// PATCH /api/admin/reviews/:id/status  (protected)
+const updateReviewStatus = (req, res) => {
+  const { status } = req.body; // 'visible' | 'hidden' | 'pending'
+  if (!["visible","hidden","pending"].includes(status))
+    return res.status(400).json({ success: false, message: "Invalid status" });
+  db.query("UPDATE reviews SET status = ? WHERE review_id = ?", [status, req.params.id], (err) => {
+    if (err) return res.status(500).json({ success: false, message: "Server error" });
+    res.json({ success: true });
+  });
+};
+
+// DELETE /api/admin/reviews/:id  (protected)
+const deleteAdminReview = (req, res) => {
+  db.query("DELETE FROM reviews WHERE review_id = ?", [req.params.id], (err) => {
+    if (err) return res.status(500).json({ success: false, message: "Server error" });
+    res.json({ success: true });
+  });
+};
+
 // ── Admin notification helper (called from other controllers) ──────────────────
 const createAdminNotification = (type, message, relatedId = null) => {
   db.query(
@@ -253,6 +452,11 @@ const markAdminNotificationRead = (req, res) => {
 module.exports = {
   adminLogin, getAdminProfile, getDashboardStats, getRecentActivity,
   getAnalytics,
+  getUsers, toggleUserStatus,
+  getBooks, publishBook, hideBook,
+  getPayments,
+  getAuthors,
+  getAdminReviews, updateReviewStatus, deleteAdminReview,
   getAdminNotifications, markAllAdminNotificationsRead, markAdminNotificationRead,
   createAdminNotification
 };

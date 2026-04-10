@@ -242,6 +242,10 @@ const loginAuthor = async (req, res) => {
 
       const token = signToken(author);
 
+      // Mark author as active on login
+      const db = require("../config/db");
+      db.query("UPDATE authors SET is_active = 1 WHERE author_id = ?", [author.author_id], () => {});
+
       res.status(200).json({
         success: true,
         message: "Login successful",

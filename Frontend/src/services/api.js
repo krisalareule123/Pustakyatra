@@ -64,9 +64,21 @@ export const readerAPI = {
   getProfile: async (token) => {
     return apiCall("/readers/profile", {
       method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  },
+
+  getStats: async (token) => {
+    return apiCall("/readers/stats", {
+      method: "GET",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  },
+
+  getNotifications: async (token) => {
+    return apiCall("/readers/notifications", {
+      method: "GET",
+      headers: { Authorization: `Bearer ${token}` },
     });
   },
 

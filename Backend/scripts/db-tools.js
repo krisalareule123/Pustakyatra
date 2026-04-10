@@ -230,13 +230,31 @@ async function fixAdminPassword() {
   if (result.affectedRows === 0) console.warn("⚠️  No admin found with that email");
   else console.log("✅ Admin password hashed successfully");
 }
-// ── router ────────────────────────────────────────────────────────────────────
+
+// ── add-reader-status ─────────────────────────────────────────────────────────
+async function addReaderStatus() {
+  await q(`ALTER TABLE readers ADD COLUMN IF NOT EXISTS is_active TINYINT(1) NOT NULL DEFAULT 0`);
+  await q(`ALTER TABLE readers ADD COLUMN IF NOT EXISTS last_seen DATETIME NULL DEFAULT NULL`);
+  await q(`ALTER TABLE readers ADD COLUMN IF NOT EXISTS is_blocked TINYINT(1) NOT NULL DEFAULT 0`);
+  await q(`ALTER TABLE authors ADD COLUMN IF NOT EXISTS is_active TINYINT(1) NOT NULL DEFAULT 0`);
+  await q(`ALTER TABLE authors ADD COLUMN IF NOT EXISTS is_blocked TINYINT(1) NOT NULL DEFAULT 0`);
+  await q(`ALTER TABLE authors ADD COLUMN IF NOT EXISTS last_seen DATETIME NULL DEFAULT NULL`);
+  console.log("✅ is_active + last_seen + is_blocked added to readers; is_active + is_blocked added to authors");
+}
+
+// ── reset-user-status ─────────────────────────────────────────────────────────
+async function resetUserStatus() {
+  const result = await q("UPDATE readers SET is_active = 0");
+  console.log(`✅ Reset ${result.affectedRows} readers to inactive`);
+}
 const commands = { inspect, describe, migrate, "clean-books": cleanBooks,
                    "fix-book-status": fixBookStatus, "fix-passwords": fixPasswords,
                    "cleanup-draft-orders": cleanupDraftOrders,
                    "create-notifications": createNotifications,
                    "create-admin-notifications": createAdminNotifications,
-                   "fix-admin-password": fixAdminPassword };
+                   "fix-admin-password": fixAdminPassword,
+                   "add-reader-status": addReaderStatus,
+                   "reset-user-status": resetUserStatus };
 
 if (!cmd || !commands[cmd]) {
   console.log("Usage: node Backend/scripts/db-tools.js <command>\n");

@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Outlet, Navigate } from "react-router-dom";
+import { useEffect } from "react";
 
 import Navbar from "./components/common/Navbar.jsx";
 import Footer from "./components/common/Footer.jsx";
@@ -55,6 +56,20 @@ function AuthorLayoutWrapper() {
 }
 
 export default function App() {
+  // Global heartbeat — keeps last_seen fresh for any logged-in reader
+  useEffect(() => {
+    const ping = () => {
+      const token = localStorage.getItem("token") || localStorage.getItem("authToken");
+      if (!token) return;
+      fetch("http://localhost:5001/api/readers/ping", {
+        headers: { Authorization: `Bearer ${token}` }
+      }).catch(() => {});
+    };
+    ping();
+    const id = setInterval(ping, 60 * 1000); // every 1 minute
+    return () => clearInterval(id);
+  }, []);
+
   return (
     <BrowserRouter>
       <CartPanel />

@@ -114,10 +114,15 @@ export default function Navbar() {
           {isLoggedIn ? (
             <Link to="/dashboard" className="profile-btn" style={{ textDecoration: "none" }}>
               <div className="profile-avatar">
-                <img
-                  src="https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=100&auto=format&fit=crop&q=60"
-                  alt="Profile"
-                />
+                {user?.profileImage ? (
+                  <img src={`http://localhost:5001/${user.profileImage}`} alt="Profile"
+                    style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }} />
+                ) : (
+                  <img
+                    src={`https://ui-avatars.com/api/?name=${encodeURIComponent(user?.fullName || "U")}&background=3b5723&color=fff&size=100`}
+                    alt="Profile"
+                  />
+                )}
               </div>
               <span className="profile-name">{user?.fullName || "User"}</span>
             </Link>

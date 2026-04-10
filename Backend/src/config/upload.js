@@ -57,4 +57,17 @@ const uploadBook = multer({
   { name: "bookFile", maxCount: 1 }
 ]);
 
-module.exports = { uploadBook };
+// Upload reader avatar
+const uploadAvatar = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => cb(null, "uploads/avatars/"),
+    filename: (req, file, cb) => {
+      const unique = crypto.randomBytes(12).toString("hex");
+      cb(null, `${unique}${path.extname(file.originalname)}`);
+    }
+  }),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  fileFilter: imageFilter,
+}).single("avatar");
+
+module.exports = { uploadBook, uploadAvatar };

@@ -1,6 +1,11 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "./Home.css";
+import hp1 from "../assets/Homepage1.jpg";
+import hp2 from "../assets/Homepage2.jpg";
+import hp3 from "../assets/Homepage3.jpg";
+import hp4 from "../assets/Homepage4.jpg";
+import hp5 from "../assets/Homepage5.jpg";
 
 const API = "http://localhost:5001/api";
 
@@ -15,6 +20,8 @@ const COLORS = [
 const initials = (title) =>
   title ? title.split(" ").slice(0, 2).map(w => w[0]?.toUpperCase()).join("") : "?";
 
+import { bookSlug } from "./BookDetails";
+
 function CoverCard({ book, badge, index }) {
   const coverUrl = book.cover_image
     ? `http://localhost:5001/${book.cover_image}`
@@ -23,7 +30,7 @@ function CoverCard({ book, badge, index }) {
   const isStarBadge = badge === "★";
 
   return (
-    <Link to={`/book/${book.book_id}`} className="coverCard" title={book.title}>
+    <Link to={`/book/${bookSlug(book.title, book.book_id)}`} className="coverCard" title={book.title}>
       <div className="coverTop" style={!coverUrl ? { background: COLORS[index % COLORS.length] } : {}}>
         {coverUrl ? (
           <img src={coverUrl} alt={book.title} />
@@ -119,11 +126,11 @@ export default function Home() {
             <div className="heroRight">
               <div className="coversShowcase">
                 <div className="coverStack" aria-hidden="true">
-                  <div className="heroCover left2" />
-                  <div className="heroCover left1" />
-                  <div className="heroCover center" />
-                  <div className="heroCover right1" />
-                  <div className="heroCover right2" />
+                  <div className="heroCover left2"><img src={hp1} alt="" /></div>
+                  <div className="heroCover left1"><img src={hp2} alt="" /></div>
+                  <div className="heroCover center"><img src={hp3} alt="" /></div>
+                  <div className="heroCover right1"><img src={hp4} alt="" /></div>
+                  <div className="heroCover right2"><img src={hp5} alt="" /></div>
                 </div>
                 <div className="showcaseGlow"></div>
               </div>

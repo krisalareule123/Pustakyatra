@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
+import { bookSlug } from "./BookDetails";
 import "./Pages.css";
 
 const API = "http://localhost:5001/api";
@@ -66,22 +67,6 @@ export default function Browse() {
         </div>
       </section>
 
-      <section className="filters-section">
-        <div className="filters-container">
-          <div className="filter-group">
-            <label className="filter-label">Category</label>
-            <div className="filter-tabs">
-              {["", "Fiction", "Non-Fiction", "Poetry", "Biography", "History", "Self-Help"].map((cat) => (
-                <button key={cat} className={`filter-tab ${category === cat ? "active" : ""}`}
-                  onClick={() => setCategory(cat)}>
-                  {cat || "All Books"}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
       <section className="content-section">
         {authorId && (
           <button className="back-btn" onClick={() => navigate(-1)}>
@@ -99,7 +84,7 @@ export default function Browse() {
 
         <div className="books-grid">
           {books.map((book, i) => (
-            <Link key={book.book_id} to={`/book/${book.book_id}`} className="book-card">
+            <Link key={book.book_id} to={`/book/${bookSlug(book.title, book.book_id)}`} className="book-card">
               <div className="book-cover">
                 {book.cover_image ? (
                   <img

@@ -1,4 +1,5 @@
 const jwt = require("jsonwebtoken");
+const db  = require("../config/db");
 
 const authReader = (req, res, next) => {
   try {
@@ -13,6 +14,20 @@ const authReader = (req, res, next) => {
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.user = decoded;
+
+    // Always update last_seen — skip on logout (logout sets it to NULL)
+    if (req.path !== "/logout") {
+      db.query(
+        "UPDATE readers SET last_seen = NOW() WHERE reader_id = ?",
+        [decoded.reader_id],
+        (err) => {
+          if (err) console.error("last_seen update error:", err.message);
+        }
+      );
+    } else {
+      console.log("⚡ Logout middleware hit for reader:", decoded.reader_id);
+    }
+
     next();
   } catch (error) {
     if (error.name === "TokenExpiredError") {

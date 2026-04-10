@@ -35,6 +35,9 @@ export default function AuthorProfile() {
     ]).then(([p, s]) => {
       if (p.success) {
         setProfile(p.author);
+        if (p.author.profileImage) {
+          setAvatarPreview(`http://localhost:5001/${p.author.profileImage}`);
+        }
         setForm({
           fullName: p.author.fullName || "",
           phone: p.author.phone || "",
@@ -105,9 +108,28 @@ export default function AuthorProfile() {
     }
   };
 
-  const handleAvatarChange = (e) => {
+  const handleAvatarChange = async (e) => {
     const file = e.target.files?.[0];
-    if (file) setAvatarPreview(URL.createObjectURL(file));
+    if (!file) return;
+    // Show preview immediately
+    setAvatarPreview(URL.createObjectURL(file));
+    // Upload to backend
+    const fd = new FormData();
+    fd.append("avatar", file);
+    try {
+      const res = await fetch(`${API}/authors/upload-avatar`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: fd,
+      }).then(r => r.json());
+      if (res.success) {
+        // Update profile with real server path
+        setProfile(prev => ({ ...prev, profileImage: res.profileImage }));
+        setAvatarPreview(`http://localhost:5001/${res.profileImage}`);
+      }
+    } catch (err) {
+      console.error("Avatar upload failed:", err);
+    }
   };
 
   if (!profile) return (
