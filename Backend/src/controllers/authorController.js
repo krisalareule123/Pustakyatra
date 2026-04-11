@@ -491,7 +491,7 @@ function getAuthorReviews(req, res) {
      FROM reviews r
      JOIN books b ON b.book_id = r.book_id
      LEFT JOIN readers rd ON rd.reader_id = r.reader_id
-     WHERE b.author_id = ?
+     WHERE b.author_id = ? AND r.status = 'visible'
      ORDER BY r.created_at DESC
      LIMIT 50`,
     [authorId],

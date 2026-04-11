@@ -156,6 +156,7 @@ export default function ForgotPassword() {
                   maxLength="6"
                   required
                   disabled={loading}
+                  autoComplete="one-time-code"
                 />
                 <small className="forgot-form-hint">
                   Didn't receive OTP?{" "}
@@ -180,6 +181,7 @@ export default function ForgotPassword() {
                   placeholder="Enter new password"
                   required
                   disabled={loading}
+                  autoComplete="new-password"
                 />
               </div>
 
@@ -193,6 +195,7 @@ export default function ForgotPassword() {
                   placeholder="Confirm new password"
                   required
                   disabled={loading}
+                  autoComplete="new-password"
                 />
               </div>
 

@@ -182,7 +182,7 @@ export default function UserDashboard() {
 
   const daysLeft = (expiresAt) => {
     if (!expiresAt) return null;
-    return Math.ceil((new Date(expiresAt) - new Date()) / (1000 * 60 * 60 * 24));
+    return Math.floor((new Date(expiresAt) - new Date()) / (1000 * 60 * 60 * 24));
   };
 
   const fmtDate = (d) =>

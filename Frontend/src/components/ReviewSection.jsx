@@ -13,6 +13,7 @@ export default function ReviewSection({ bookId }) {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [currentReaderId, setCurrentReaderId] = useState(null);
 
   useEffect(() => {
     // Validate bookId
@@ -26,6 +27,12 @@ export default function ReviewSection({ bookId }) {
     // Check if user is logged in
     const token = localStorage.getItem("token") || localStorage.getItem("authToken");
     setIsLoggedIn(!!token);
+
+    // Get current reader id from userData
+    const userData = localStorage.getItem("userData");
+    if (userData) {
+      try { setCurrentReaderId(JSON.parse(userData).reader_id); } catch (_) {}
+    }
 
     // Fetch reviews
     fetchReviews();
@@ -159,11 +166,11 @@ export default function ReviewSection({ bookId }) {
         </div>
       </div>
 
-      {/* Write Review Section */}
-      {!showReviewForm && (
+      {/* Write Review — only show if user hasn't reviewed yet */}
+      {!showReviewForm && !userReview && (
         <div className="write-review-prompt">
-          <button 
-            className="btn-write-review" 
+          <button
+            className="btn-write-review"
             onClick={() => {
               if (!isLoggedIn) {
                 setMessage({ type: "error", text: "Please login to write a review" });
@@ -173,7 +180,7 @@ export default function ReviewSection({ bookId }) {
               setShowReviewForm(true);
             }}
           >
-            {userReview ? "Edit Your Review" : "Write a Review"}
+            Write a Review
           </button>
         </div>
       )}
@@ -243,9 +250,25 @@ export default function ReviewSection({ bookId }) {
                   <span className="reviewer-name">{review.reader_name || "Anonymous"}</span>
                   {renderStars(review.rating)}
                 </div>
-                <span className="review-date">
-                  {new Date(review.created_at).toLocaleDateString()}
-                </span>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <span className="review-date">
+                    {new Date(review.created_at).toLocaleDateString()}
+                  </span>
+                  {/* Edit button only for the review owner */}
+                  {currentReaderId && String(review.reader_id) === String(currentReaderId) && !showReviewForm && (
+                    <button
+                      style={{ fontSize: 12, padding: "3px 10px", borderRadius: 6,
+                        background: "#f0f0f0", border: "none", cursor: "pointer",
+                        color: "#555", fontWeight: 600 }}
+                      onClick={() => {
+                        setRating(review.rating);
+                        setReviewText(review.review_text || "");
+                        setShowReviewForm(true);
+                      }}>
+                      Edit
+                    </button>
+                  )}
+                </div>
               </div>
               {review.review_text && (
                 <p className="review-content">{review.review_text}</p>

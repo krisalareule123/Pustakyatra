@@ -888,7 +888,7 @@ const getReaderNotifications = (req, res) => {
         if (isRent && row.access_expires_at) {
           const expires = new Date(row.access_expires_at);
           const diffMs = expires - now;
-          const daysLeft = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+          const daysLeft = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
           if (daysLeft <= 0) {
             // Expired

@@ -24,6 +24,8 @@ export default function Register() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [resendTimer, setResendTimer] = useState(0);
+  const [showPwd,     setShowPwd]     = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const isAuthor = role === "author";
 
   const roleTitle = useMemo(() => isAuthor ? "Create an Author account" : "Create a Reader account", [isAuthor]);
@@ -288,7 +290,7 @@ export default function Register() {
                     autoComplete="name"
                     value={form.fullName}
                     onChange={(e) => updateField("fullName", e.target.value)}
-                    placeholder="e.g., Krisala Reule"
+                    placeholder="e.g., Ram Sharma"
                   />
                 </div>
                 <div className="field">
@@ -304,25 +306,81 @@ export default function Register() {
                 </div>
                 <div className="field">
                   <label htmlFor="reg-password">Password<span>*</span></label>
-                  <input
-                    id="reg-password"
-                    type="password"
-                    autoComplete="new-password"
-                    value={form.password}
-                    onChange={(e) => updateField("password", e.target.value)}
-                    placeholder="Minimum 6 characters"
-                  />
+                  <div style={{ position: "relative" }}>
+                    <input
+                      id="reg-password"
+                      type={showPwd ? "text" : "password"}
+                      autoComplete="new-password"
+                      value={form.password}
+                      onChange={(e) => updateField("password", e.target.value)}
+                      placeholder="e.g., MyPass@123"
+                      style={{ paddingRight: 40 }}
+                    />
+                    <button type="button" tabIndex={-1}
+                      onClick={() => setShowPwd(v => !v)}
+                      style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)",
+                        background: "none", border: "none", cursor: "pointer", color: "#888", padding: 0 }}>
+                      {showPwd ? (
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/>
+                          <path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/>
+                          <line x1="1" y1="1" x2="23" y2="23"/>
+                        </svg>
+                      ) : (
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                          <circle cx="12" cy="12" r="3"/>
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+                  {form.password.length > 0 && (
+                    <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 4 }}>
+                      {[
+                        { label: "At least 8 characters",        ok: form.password.length >= 8 },
+                        { label: "One uppercase letter (A-Z)",    ok: /[A-Z]/.test(form.password) },
+                        { label: "One lowercase letter (a-z)",    ok: /[a-z]/.test(form.password) },
+                        { label: "One number (0-9)",              ok: /[0-9]/.test(form.password) },
+                        { label: "One special character (@#!...)",ok: /[^A-Za-z0-9]/.test(form.password) },
+                      ].map(r => (
+                        <div key={r.label} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12 }}>
+                          <span style={{ color: r.ok ? "#1e6b35" : "#aaa", fontSize: 14 }}>{r.ok ? "✓" : "○"}</span>
+                          <span style={{ color: r.ok ? "#1e6b35" : "#888" }}>{r.label}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <div className="field">
                   <label htmlFor="reg-confirm">Confirm Password<span>*</span></label>
-                  <input
-                    id="reg-confirm"
-                    type="password"
-                    autoComplete="new-password"
-                    value={form.confirmPassword}
-                    onChange={(e) => updateField("confirmPassword", e.target.value)}
-                    placeholder="Re-enter password"
-                  />
+                  <div style={{ position: "relative" }}>
+                    <input
+                      id="reg-confirm"
+                      type={showConfirm ? "text" : "password"}
+                      autoComplete="new-password"
+                      value={form.confirmPassword}
+                      onChange={(e) => updateField("confirmPassword", e.target.value)}
+                      placeholder="Re-enter password"
+                      style={{ paddingRight: 40 }}
+                    />
+                    <button type="button" tabIndex={-1}
+                      onClick={() => setShowConfirm(v => !v)}
+                      style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)",
+                        background: "none", border: "none", cursor: "pointer", color: "#888", padding: 0 }}>
+                      {showConfirm ? (
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/>
+                          <path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/>
+                          <line x1="1" y1="1" x2="23" y2="23"/>
+                        </svg>
+                      ) : (
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                          <circle cx="12" cy="12" r="3"/>
+                        </svg>
+                      )}
+                    </button>
+                  </div>
                 </div>
               </div>
 
