@@ -48,6 +48,7 @@ export default function UserDashboard() {
   const [notifs,       setNotifs]       = useState([]);
   const [notifsLoaded, setNotifsLoaded] = useState(false);
   const [showPwForm,   setShowPwForm]   = useState(false);
+  const [receipt,      setReceipt]      = useState(null); // order to show in receipt modal
   const [openingBook,  setOpeningBook]  = useState(null);
 
   const initials = (name) => name?.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase() || "U";
@@ -87,6 +88,11 @@ export default function UserDashboard() {
     // Fetch reader stats
     readerAPI.getStats(token)
       .then(res => { if (res.success) setStats(res.stats); })
+      .catch(() => {});
+
+    // Pre-load notifications for badge count
+    readerAPI.getNotifications(token)
+      .then(res => { if (res.success) { setNotifs(res.notifications); setNotifsLoaded(true); } })
       .catch(() => {});
   }, [navigate]);
 
@@ -239,14 +245,29 @@ export default function UserDashboard() {
 
         {/* Nav */}
         <nav className="rd-nav">
-          {NAV.map(item => (
-            <button key={item.key}
-              className={`rd-nav-item ${active === item.key ? "active" : ""}`}
-              onClick={() => switchTab(item.key)}>
-              <span className="rd-nav-icon">{item.icon}</span>
-              {item.label}
-            </button>
-          ))}
+          {NAV.map(item => {
+            // Badge for notifications — count of alerts (expiring/expired rentals)
+            const badge = item.key === "notifications" && notifs.length > 0
+              ? notifs.filter(n => n.type === "expired" || n.type === "expiring").length
+              : 0;
+            return (
+              <button key={item.key}
+                className={`rd-nav-item ${active === item.key ? "active" : ""}`}
+                onClick={() => switchTab(item.key)}>
+                <span className="rd-nav-icon">{item.icon}</span>
+                {item.label}
+                {badge > 0 && (
+                  <span style={{
+                    marginLeft: "auto", minWidth: 18, height: 18,
+                    background: active === item.key ? "rgba(255,255,255,0.3)" : "#e53e3e",
+                    color: "white", borderRadius: 20, fontSize: 10, fontWeight: 800,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    padding: "0 5px",
+                  }}>{badge}</span>
+                )}
+              </button>
+            );
+          })}
 
           <div className="rd-nav-divider" />
 
@@ -736,6 +757,11 @@ export default function UserDashboard() {
                           <span style={{ fontSize: 13, fontWeight: 700, color: "#1a2912" }}>
                             Rs {parseFloat(order.totalAmount).toFixed(2)}
                           </span>
+                          <button onClick={() => setReceipt(order)}
+                            style={{ fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 6,
+                              background: "#f0f0f0", border: "none", cursor: "pointer", color: "#555" }}>
+                            View Receipt
+                          </button>
                         </div>
                       </div>
                       {order.items?.map((item, i) => (
@@ -913,7 +939,7 @@ export default function UserDashboard() {
                     <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                       <thead>
                         <tr style={{ background: "#fafafa" }}>
-                          {["Order #", "Books", "Amount", "Method", "Status", "Date"].map(h => (
+                          {["Order #", "Books", "Amount", "Method", "Status", "Date", ""].map(h => (
                             <th key={h} style={{ padding: "10px 12px", textAlign: "left", fontSize: 11,
                               fontWeight: 700, color: "#888", textTransform: "uppercase",
                               letterSpacing: "0.5px", borderBottom: "1px solid #f0f0f0" }}>{h}</th>
@@ -947,6 +973,14 @@ export default function UserDashboard() {
                                   Ref: {order.transactionCode}
                                 </div>
                               )}
+                            </td>
+                            <td style={{ padding: "12px 12px" }}>
+                              <button onClick={() => setReceipt(order)}
+                                style={{ fontSize: 11, fontWeight: 600, padding: "4px 10px",
+                                  borderRadius: 6, background: "#f0f0f0", border: "none",
+                                  cursor: "pointer", color: "#555", whiteSpace: "nowrap" }}>
+                                View
+                              </button>
                             </td>
                           </tr>
                         ))}
@@ -1032,6 +1066,89 @@ export default function UserDashboard() {
 
         </div>
       </main>
+
+      {/* Receipt Modal */}
+      {receipt && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)",
+          display: "flex", alignItems: "center", justifyContent: "center", zIndex: 999 }}
+          onClick={() => setReceipt(null)}>
+          <div style={{ background: "white", borderRadius: 16, width: 440, maxHeight: "90vh",
+            overflowY: "auto", boxShadow: "0 20px 60px rgba(0,0,0,0.2)" }}
+            onClick={e => e.stopPropagation()}>
+
+            {/* Header */}
+            <div style={{ background: "linear-gradient(135deg,#2d4419,#3b5723)", padding: "24px 28px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                <div>
+                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.6)", fontWeight: 600,
+                    textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 4 }}>Payment Receipt</div>
+                  <div style={{ fontSize: 20, fontWeight: 800, color: "white" }}>
+                    Rs {parseFloat(receipt.totalAmount).toFixed(2)}
+                  </div>
+                </div>
+                <span style={{ background: "rgba(34,197,94,0.2)", color: "#86efac",
+                  fontSize: 11, fontWeight: 700, padding: "4px 12px", borderRadius: 20,
+                  border: "1px solid rgba(34,197,94,0.3)" }}>✓ Paid</span>
+              </div>
+            </div>
+
+            {/* Details */}
+            <div style={{ padding: "20px 28px" }}>
+              {[
+                ["Order ID",       `#${receipt.orderId}`],
+                ["Payment Date",   fmtDateTime(receipt.paidAt)],
+                ["Transaction Ref", receipt.transactionCode || "—"],
+              ].map(([k, v]) => (
+                <div key={k} style={{ display: "flex", justifyContent: "space-between",
+                  padding: "10px 0", borderBottom: "1px solid #f5f5f5", fontSize: 13 }}>
+                  <span style={{ color: "#888", fontWeight: 500 }}>{k}</span>
+                  <span style={{ color: "#1a2912", fontWeight: 700, textAlign: "right",
+                    maxWidth: 220, wordBreak: "break-all" }}>{v}</span>
+                </div>
+              ))}
+
+              {/* Books */}
+              {receipt.items?.length > 0 && (
+                <div style={{ marginTop: 16 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "#aaa",
+                    textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 10 }}>
+                    Books Purchased
+                  </div>
+                  {receipt.items.map((item, i) => (
+                    <div key={i} style={{ display: "flex", justifyContent: "space-between",
+                      alignItems: "center", padding: "10px 0",
+                      borderBottom: i < receipt.items.length - 1 ? "1px solid #f5f5f5" : "none" }}>
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: "#1a2912" }}>{item.bookTitle}</div>
+                        <div style={{ fontSize: 11, color: "#888", marginTop: 2 }}>
+                          {item.itemType === "rent"
+                            ? `Rental · ${item.rentDays} days`
+                            : "Purchased · Permanent access"}
+                        </div>
+                      </div>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: "#1a2912" }}>
+                        Rs {parseFloat(item.totalPrice).toFixed(2)}
+                      </span>
+                    </div>
+                  ))}
+                  <div style={{ display: "flex", justifyContent: "space-between",
+                    padding: "12px 0 0", fontSize: 14, fontWeight: 800, color: "#1a2912" }}>
+                    <span>Total</span>
+                    <span>Rs {parseFloat(receipt.totalAmount).toFixed(2)}</span>
+                  </div>
+                </div>
+              )}
+
+              <button onClick={() => setReceipt(null)}
+                style={{ marginTop: 20, width: "100%", padding: "11px", background: "#3b5723",
+                  color: "white", border: "none", borderRadius: 8, fontSize: 13,
+                  fontWeight: 700, cursor: "pointer" }}>
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
