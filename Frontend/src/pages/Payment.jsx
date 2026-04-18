@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import { orderAPI } from "../services/api";
-import esewaQR from "../assets/Esewa_QR.png";
 import "./Payment.css";
 
 export default function Payment() {
@@ -182,12 +181,7 @@ export default function Payment() {
             <h3>Pay via</h3>
 
             <div className="esewa-payment-box">
-              <div className="esewa-qr-side">
-                <p className="qr-label">Or scan QR to pay</p>
-                <img src={esewaQR} alt="eSewa QR Code" className="esewa-qr-img" />
-              </div>
-
-              <div className="esewa-info-side">
+              <div className="esewa-info-side" style={{ width: "100%" }}>
                 <div className="esewa-logo-box">
                   <span className="esewa-logo-text">eSewa</span>
                 </div>

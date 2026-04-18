@@ -44,7 +44,7 @@ const createBook = (req, res) => {
     db.query(query, [
       authorId, title, nepaliTitle || null, description || null,
       category || null, language || "Nepali", keywords || null,
-      parseFloat(buyPrice), parseFloat(rentPrice), parseInt(rentDays) || 15,
+      parseFloat(buyPrice), parseFloat(rentPrice), rentDays !== undefined && rentDays !== "" ? parseInt(rentDays) : 15,
       coverImage, pdfFile, bookStatus
     ], (err, result) => {
       if (err) {
@@ -104,7 +104,7 @@ const updateBook = (req, res) => {
     const values = [
       title, nepaliTitle || null, description || null, category || null,
       language || "Nepali", keywords || null,
-      parseFloat(buyPrice), parseFloat(rentPrice), parseInt(rentDays) || 15
+      parseFloat(buyPrice), parseFloat(rentPrice), rentDays !== undefined && rentDays !== "" ? parseInt(rentDays) : 15
     ];
 
     if (coverImage) { fields.push("cover_image = ?"); values.push(coverImage); }

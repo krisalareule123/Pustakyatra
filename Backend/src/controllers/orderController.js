@@ -470,6 +470,7 @@ const verifyEsewa = async (req, res) => {
             db.query(
               `UPDATE order_items
                SET access_expires_at = CASE
+                 WHEN item_type = 'rent' AND rent_days = 0 THEN DATE_ADD(NOW(), INTERVAL 5 MINUTE)
                  WHEN item_type = 'rent' THEN DATE_ADD(NOW(), INTERVAL rent_days DAY)
                  ELSE NULL
                END

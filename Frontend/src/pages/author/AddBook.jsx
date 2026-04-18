@@ -214,6 +214,7 @@ export default function AddBook() {
               <label htmlFor="rentDays">Rent Duration *</label>
               <select id="rentDays" name="rentDays" value={bookData.rentDays}
                 onChange={handleInputChange} className="form-control" required>
+                <option value="0">5 Minutes (test)</option>
                 <option value="7">7 Days</option>
                 <option value="15">15 Days</option>
                 <option value="30">30 Days</option>

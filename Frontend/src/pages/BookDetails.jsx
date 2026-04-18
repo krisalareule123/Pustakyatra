@@ -201,7 +201,7 @@ export default function BookDetails() {
               <div className="pk-action-card">
                 <div className="pk-action-label">E-book (Rent)</div>
                 <div className="pk-action-price">Rs {parseFloat(book.rent_price).toLocaleString()}</div>
-                <div className="pk-action-note">{book.rent_days} days access</div>
+                <div className="pk-action-note">{book.rent_days === 0 ? "5 minutes access" : `${book.rent_days} days access`}</div>
                 <div className="pk-action-buttons">
                   {!inCartRent ? (
                     <>

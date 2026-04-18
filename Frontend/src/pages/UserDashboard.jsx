@@ -10,6 +10,7 @@ const NAV = [
   { key: "orders",        icon: "📋", label: "My Orders"       },
   { key: "library",       icon: "📚", label: "My Library"      },
   { key: "payments",      icon: "💳", label: "Payments"        },
+  { key: "history",       icon: "🕐", label: "Reading History" },
   { key: "notifications", icon: "🔔", label: "Notifications"   },
 ];
 
@@ -160,7 +161,7 @@ export default function UserDashboard() {
   const switchTab = (key) => {
     setActive(key);
     const token = localStorage.getItem("token") || localStorage.getItem("authToken");
-    if ((key === "orders" || key === "payments") && !ordersLoaded) {
+    if ((key === "orders" || key === "payments" || key === "history") && !ordersLoaded) {
       orderAPI.getMyOrders(token, "paid")
         .then(res => { if (res.success) setOrders(res.orders); })
         .finally(() => setOrdersLoaded(true));
@@ -292,6 +293,7 @@ export default function UserDashboard() {
                active === "orders"    ? "Your completed purchases" :
                active === "library"   ? "Your purchased and rented books" :
                active === "payments"      ? "Your transaction history" :
+               active === "history"       ? "All books you have read or rented" :
                active === "notifications" ? "Your activity and rental alerts" :
                "Preferences and notifications"}
             </p>
@@ -988,6 +990,72 @@ export default function UserDashboard() {
                     </table>
                   </div>
                 </>
+              )}
+            </div>
+          )}
+
+          {/* ── Reading History ── */}
+          {active === "history" && (
+            <div className="rd-panel">
+              <div className="rd-panel-header">
+                <h3 className="rd-panel-title">Reading History</h3>
+                <span style={{ fontSize: 12, color: "#888" }}>All books you've purchased or rented</span>
+              </div>
+              {!ordersLoaded ? (
+                <p style={{ padding: "24px 22px", color: "#888", fontSize: 13 }}>Loading history...</p>
+              ) : orders.length === 0 ? (
+                <div style={{ padding: "48px 22px", textAlign: "center", color: "#aaa" }}>
+                  <div style={{ fontSize: 36, marginBottom: 10 }}>🕐</div>
+                  <p style={{ fontSize: 14, margin: 0 }}>No reading history yet.</p>
+                </div>
+              ) : (
+                <div style={{ padding: "8px 0" }}>
+                  {orders.flatMap(order =>
+                    (order.items || []).map((item, i) => {
+                      const isRent = item.itemType === "rent";
+                      const expired = isRent && item.accessExpiresAt && new Date(item.accessExpiresAt) < new Date();
+                      const remaining = isRent && item.accessExpiresAt
+                        ? Math.floor((new Date(item.accessExpiresAt) - new Date()) / (1000 * 60 * 60 * 24))
+                        : null;
+                      return (
+                        <div key={`${order.orderId}-${i}`} style={{
+                          display: "flex", alignItems: "center", gap: 14,
+                          padding: "14px 22px", borderBottom: "1px solid #f5f5f5"
+                        }}>
+                          {/* Book avatar */}
+                          <div style={{ width: 42, height: 42, borderRadius: 8, flexShrink: 0,
+                            background: expired ? "#f0f0f0" : "#3b5723",
+                            color: expired ? "#aaa" : "white", fontSize: 13, fontWeight: 700,
+                            display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            {item.bookTitle?.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase()}
+                          </div>
+                          {/* Info */}
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: 13, fontWeight: 700, color: "#1a2912" }}>{item.bookTitle}</div>
+                            <div style={{ fontSize: 11, color: "#888", marginTop: 2 }}>
+                              {isRent ? (
+                                expired
+                                  ? `Rental expired · ${fmtDate(item.accessExpiresAt)}`
+                                  : `Rental active · ${remaining} day${remaining !== 1 ? "s" : ""} left`
+                              ) : "Purchased · Permanent access"}
+                            </div>
+                            <div style={{ fontSize: 10, color: "#bbb", marginTop: 1 }}>
+                              Paid {fmtDate(order.paidAt || order.createdAt)}
+                            </div>
+                          </div>
+                          {/* Status badge */}
+                          <span style={{
+                            fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 20,
+                            background: expired ? "#f0f0f0" : isRent ? "#e8f0fe" : "#e6f4ea",
+                            color: expired ? "#aaa" : isRent ? "#1a56db" : "#1e6b35",
+                          }}>
+                            {expired ? "Expired" : isRent ? "Rented" : "Owned"}
+                          </span>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
               )}
             </div>
           )}
