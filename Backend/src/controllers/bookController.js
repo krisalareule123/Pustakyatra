@@ -364,4 +364,32 @@ function createAuthorNotification(authorId, bookId, type, message, readerId = nu
   );
 }
 
-module.exports = { createBook, updateBook, updateBookPdf, publishBook, getBooks, getBook, servePdf, downloadPdf, createAuthorNotification };
+// DELETE /api/books/:bookId — author can delete their own book
+const deleteBook = (req, res) => {
+  const authorId = req.user.author_id;
+  const { bookId } = req.params;
+  // Only allow if no paid orders exist for this book
+  db.query(
+    `SELECT COUNT(*) AS cnt FROM order_items oi
+     JOIN orders o ON o.order_id = oi.order_id
+     WHERE oi.book_id = ? AND o.status = 'paid'`,
+    [bookId],
+    (err, rows) => {
+      if (err) return res.status(500).json({ success: false, message: "Server error" });
+      if (rows[0].cnt > 0) {
+        return res.status(400).json({ success: false, message: "Cannot delete a book that has been purchased by readers." });
+      }
+      db.query(
+        "DELETE FROM books WHERE book_id = ? AND author_id = ?",
+        [bookId, authorId],
+        (err2, result) => {
+          if (err2) return res.status(500).json({ success: false, message: "Server error" });
+          if (result.affectedRows === 0) return res.status(404).json({ success: false, message: "Book not found" });
+          res.json({ success: true, message: "Book deleted successfully" });
+        }
+      );
+    }
+  );
+};
+
+module.exports = { createBook, updateBook, updateBookPdf, publishBook, deleteBook, getBooks, getBook, servePdf, downloadPdf, createAuthorNotification };

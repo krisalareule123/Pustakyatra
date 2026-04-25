@@ -65,15 +65,18 @@ const createOrder = (req, res) => {
 
             const dbOrderId = result.insertId;
 
+            const COMMISSION_RATE = 0.15;
             const itemValues = items.map(item => [
               dbOrderId, item.bookId, item.title, item.type,
               item.quantity, item.price, item.totalPrice,
-              item.rentDays || null, null
+              item.rentDays != null ? item.rentDays : null, null,
+              Math.round(item.totalPrice * COMMISSION_RATE * 100) / 100,
+              Math.round(item.totalPrice * (1 - COMMISSION_RATE) * 100) / 100
             ]);
 
             db.query(
               `INSERT INTO order_items
-                (order_id, book_id, book_title, item_type, quantity, price, total_price, rent_days, access_expires_at)
+                (order_id, book_id, book_title, item_type, quantity, price, total_price, rent_days, access_expires_at, admin_commission, author_earnings)
                VALUES ?`,
               [itemValues],
               (err2) => {

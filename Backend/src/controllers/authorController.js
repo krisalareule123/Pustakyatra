@@ -418,7 +418,7 @@ function getAuthorStats(req, res) {
 
     // Earnings: sum of order_items for this author's books
     const earningsQuery = `
-      SELECT COALESCE(SUM(oi.total_price), 0) AS totalEarnings
+      SELECT COALESCE(SUM(oi.author_earnings), 0) AS totalEarnings
       FROM order_items oi
       JOIN books b ON b.book_id = oi.book_id
       JOIN orders o ON o.order_id = oi.order_id
@@ -464,7 +464,7 @@ function getAuthorBooks(req, res) {
       b.book_id, b.title, b.nepali_title, b.status, b.cover_image,
       b.buy_price, b.rent_price, b.created_at,
       COUNT(DISTINCT CASE WHEN o.status = 'paid' THEN oi.order_id END) AS sales,
-      COALESCE(SUM(CASE WHEN o.status = 'paid' THEN oi.total_price ELSE 0 END), 0) AS earnings
+      COALESCE(SUM(CASE WHEN o.status = 'paid' THEN oi.author_earnings ELSE 0 END), 0) AS earnings
     FROM books b
     LEFT JOIN order_items oi ON oi.book_id = b.book_id
     LEFT JOIN orders o ON o.order_id = oi.order_id

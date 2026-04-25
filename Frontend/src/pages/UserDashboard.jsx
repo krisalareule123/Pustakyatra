@@ -166,12 +166,11 @@ export default function UserDashboard() {
         .then(res => { if (res.success) setOrders(res.orders); })
         .finally(() => setOrdersLoaded(true));
     }
-    if (key === "library" && !libLoaded) {
+    if (key === "library") {
       orderAPI.getLibrary(token)
         .then(res => { if (res.success) setLibrary(res.library); })
         .finally(() => setLibLoaded(true));
-    }
-    if (key === "notifications" && !notifsLoaded) {
+    }    if (key === "notifications" && !notifsLoaded) {
       readerAPI.getNotifications(token)
         .then(res => { if (res.success) setNotifs(res.notifications); })
         .finally(() => setNotifsLoaded(true));
@@ -190,6 +189,11 @@ export default function UserDashboard() {
   const daysLeft = (expiresAt) => {
     if (!expiresAt) return null;
     return Math.floor((new Date(expiresAt) - new Date()) / (1000 * 60 * 60 * 24));
+  };
+
+  const isExpired = (expiresAt) => {
+    if (!expiresAt) return false;
+    return new Date(expiresAt) <= new Date();
   };
 
   const fmtDate = (d) =>
@@ -852,7 +856,7 @@ export default function UserDashboard() {
                       .map((book, i) => {
                       const isRent = book.accessType === "rent";
                       const remaining = isRent ? daysLeft(book.rentExpiresAt) : null;
-                      const expired = remaining !== null && remaining <= 0;
+                      const expired = isRent ? isExpired(book.rentExpiresAt) : false;
                       return (
                         <div key={i} style={{ border: "1px solid #f0f0f0", borderRadius: 10,
                           padding: 16, background: expired ? "#fafafa" : "white",
@@ -875,7 +879,10 @@ export default function UserDashboard() {
                           <div style={{ fontSize: 11, color: expired ? "#b91c1c" : remaining !== null && remaining <= 3 ? "#b45309" : "#888" }}>
                             {!isRent ? "✓ Permanent access" :
                              expired ? "Rental expired" :
-                             remaining === 0 ? "Expires today" :
+                             remaining === 0 ? (() => {
+                               const mins = Math.floor((new Date(book.rentExpiresAt) - new Date()) / 60000);
+                               return mins <= 0 ? "Expires soon" : `${mins} min${mins !== 1 ? "s" : ""} left`;
+                             })() :
                              `${remaining} day${remaining !== 1 ? "s" : ""} left`}
                           </div>
                           {!expired ? (

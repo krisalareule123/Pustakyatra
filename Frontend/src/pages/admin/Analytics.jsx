@@ -121,12 +121,14 @@ export default function AdminAnalytics() {
   if (!data)   return null;
 
   const SUMMARY = [
-    { label: "Total Users",   value: data.totalUsers,   icon: "👥", bg: "#e8f0fe", color: "#1a56db" },
-    { label: "Total Authors", value: data.totalAuthors, icon: "✍️", bg: "#e6f4ea", color: "#1e6b35" },
-    { label: "Total Books",   value: data.totalBooks,   icon: "📚", bg: "#fff8e1", color: "#b45309" },
-    { label: "Total Orders",  value: data.totalOrders,  icon: "🛒", bg: "#fde8e8", color: "#b91c1c" },
-    { label: "Total Revenue", value: `Rs. ${data.totalRevenue.toLocaleString()}`, icon: "💰", bg: "#e6f4ea", color: "#1e6b35" },
-    { label: "Total Reviews", value: data.totalReviews, icon: "⭐", bg: "#fff8e1", color: "#b45309" },
+    { label: "Total Users",          value: data.totalUsers,   icon: "👥", bg: "#e8f0fe", color: "#1a56db" },
+    { label: "Total Authors",        value: data.totalAuthors, icon: "✍️", bg: "#e6f4ea", color: "#1e6b35" },
+    { label: "Total Books",          value: data.totalBooks,   icon: "📚", bg: "#fff8e1", color: "#b45309" },
+    { label: "Total Orders",         value: data.totalOrders,  icon: "🛒", bg: "#fde8e8", color: "#b91c1c" },
+    { label: "Total Revenue",        value: `Rs. ${parseFloat(data.totalRevenue || 0).toLocaleString()}`,        icon: "💰", bg: "#e6f4ea", color: "#1e6b35" },
+    { label: "Platform Commission (15%)", value: `Rs. ${parseFloat(data.platformCommission || 0).toLocaleString()}`, icon: "🏦", bg: "#e8f0fe", color: "#1a56db" },
+    { label: "Author Payouts (85%)", value: `Rs. ${parseFloat(data.authorPayouts || 0).toLocaleString()}`,      icon: "✍️", bg: "#fff8e1", color: "#b45309" },
+    { label: "Total Reviews",        value: data.totalReviews, icon: "⭐", bg: "#fff8e1", color: "#b45309" },
   ];
 
   const ratingDist = [

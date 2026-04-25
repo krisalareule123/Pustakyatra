@@ -53,7 +53,20 @@ export default function MyBooks() {
 
   const handleDelete = async (bookId) => {
     if (!window.confirm("Delete this book? This cannot be undone.")) return;
-    setBooks(prev => prev.filter(b => b.book_id !== bookId));
+    const token = localStorage.getItem("authorToken");
+    try {
+      const res = await fetch(`http://localhost:5001/api/books/${bookId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` }
+      }).then(r => r.json());
+      if (res.success) {
+        setBooks(prev => prev.filter(b => b.book_id !== bookId));
+      } else {
+        alert(res.message || "Could not delete book.");
+      }
+    } catch {
+      alert("Failed to connect to server.");
+    }
   };
 
   const totalEarnings = books.reduce((s, b) => s + parseFloat(b.earnings || 0), 0);

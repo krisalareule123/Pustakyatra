@@ -169,12 +169,14 @@ const getRecentActivity = (req, res) => {
 const getAnalytics = (req, res) => {
   const queries = {
     // Summary
-    totalUsers:    "SELECT COUNT(*) AS val FROM readers",
-    totalAuthors:  "SELECT COUNT(*) AS val FROM authors WHERE is_verified = 1",
-    totalBooks:    "SELECT COUNT(*) AS val FROM books",
-    totalOrders:   "SELECT COUNT(*) AS val FROM orders WHERE status = 'paid'",
-    totalRevenue:  "SELECT COALESCE(SUM(total_amount), 0) AS val FROM orders WHERE status = 'paid'",
-    totalReviews:  "SELECT COUNT(*) AS val FROM reviews",
+    totalUsers:         "SELECT COUNT(*) AS val FROM readers",
+    totalAuthors:       "SELECT COUNT(*) AS val FROM authors WHERE is_verified = 1",
+    totalBooks:         "SELECT COUNT(*) AS val FROM books",
+    totalOrders:        "SELECT COUNT(*) AS val FROM orders WHERE status = 'paid'",
+    totalRevenue:       "SELECT COALESCE(SUM(total_amount), 0) AS val FROM orders WHERE status = 'paid'",
+    platformCommission: "SELECT COALESCE(SUM(oi.admin_commission), 0) AS val FROM order_items oi JOIN orders o ON o.order_id = oi.order_id WHERE o.status = 'paid'",
+    authorPayouts:      "SELECT COALESCE(SUM(oi.author_earnings), 0) AS val FROM order_items oi JOIN orders o ON o.order_id = oi.order_id WHERE o.status = 'paid'",
+    totalReviews:       "SELECT COUNT(*) AS val FROM reviews",
 
     // Buy vs Rent
     buyOrders:  "SELECT COUNT(*) AS val FROM order_items oi JOIN orders o ON o.order_id = oi.order_id WHERE o.status = 'paid' AND oi.item_type = 'buy'",

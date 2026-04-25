@@ -1,6 +1,6 @@
 const express = require("express");
 const jwt = require("jsonwebtoken");
-const { createBook, updateBook, updateBookPdf, publishBook, getBooks, getBook, servePdf, downloadPdf } = require("../controllers/bookController");
+const { createBook, updateBook, updateBookPdf, publishBook, deleteBook, getBooks, getBook, servePdf, downloadPdf } = require("../controllers/bookController");
 const authReader = require("../middleware/authReader");
 const { uploadBook } = require("../config/upload");
 
@@ -36,6 +36,7 @@ router.post("/", authAuthor, withUpload, createBook);
 router.put("/:bookId/update", authAuthor, withUpload, updateBook);
 router.put("/:bookId/pdf", authAuthor, withUpload, updateBookPdf);
 router.put("/:bookId/publish", authAuthor, publishBook);
+router.delete("/:bookId", authAuthor, deleteBook);
 
 // Reader-protected
 router.get("/:bookId/read", authReader, servePdf);

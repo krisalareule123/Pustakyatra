@@ -86,7 +86,7 @@ export default function AuthorDashboard() {
           <div className="stat-value">{stats?.drafts ?? 0}</div>
         </div>
         <div className="stat-box">
-          <div className="stat-label">Earnings</div>
+          <div className="stat-label">Your Earnings (85%)</div>
           <div className="stat-value">Rs. {(stats?.totalEarnings ?? 0).toLocaleString()}</div>
         </div>
       </div>
