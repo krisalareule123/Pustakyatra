@@ -8,6 +8,7 @@ const {
   getAuthorStats, getAuthorBook, getAuthorBooks,
   getAuthorReviews, getNotifications, markNotificationRead, getPublicAuthors, getAuthorPublicBooks
 } = require("../controllers/authorController");
+const { createPromoCode, getAuthorPromoCodes, deletePromoCode, updatePromoCode } = require("../controllers/promoController");
 
 const router = express.Router();
 
@@ -68,5 +69,11 @@ router.get("/books/:bookId", authAuthor, getAuthorBook);
 router.get("/reviews", authAuthor, getAuthorReviews);
 router.get("/notifications", authAuthor, getNotifications);
 router.patch("/notifications/:id/read", authAuthor, markNotificationRead);
+
+// Promo Codes
+router.get("/promo-codes", authAuthor, getAuthorPromoCodes);
+router.post("/promo-codes", authAuthor, createPromoCode);
+router.put("/promo-codes/:id", authAuthor, updatePromoCode);
+router.delete("/promo-codes/:id", authAuthor, deletePromoCode);
 
 module.exports = router;

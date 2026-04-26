@@ -114,20 +114,24 @@ export default function MyBooks() {
                     <tr key={book.book_id}>
                       <td><div className="book-title-cell">{book.title}</div></td>
                       <td>
-                        <span className={`status-indicator ${book.status}`}>{book.status}</span>
+                        <span className={`status-indicator ${book.deleted_at ? 'deleted' : book.status}`}>
+                          {book.deleted_at ? 'Deleted' : book.status}
+                        </span>
                       </td>
                       <td><div className="metric-value">{book.sales}</div></td>
                       <td><div className="metric-value">Rs. {parseFloat(book.earnings).toLocaleString()}</div></td>
                       <td><div className="time-value">{fmtDate(book.created_at)}</div></td>
                       <td>
                         <div className="table-actions">
-                          <button
-                            className="action-btn-small edit"
-                            onClick={() => navigate(`/author/add-book?edit=${book.book_id}`)}
-                          >
-                            Edit
-                          </button>
-                          {book.status === "draft" && (
+                          {!book.deleted_at && (
+                            <button
+                              className="action-btn-small edit"
+                              onClick={() => navigate(`/author/add-book?edit=${book.book_id}`)}
+                            >
+                              Edit
+                            </button>
+                          )}
+                          {book.status === "draft" && !book.deleted_at && (
                             <button
                               className="action-btn-small"
                               style={{ background: "#3b5723", color: "white", border: "none" }}
@@ -137,7 +141,9 @@ export default function MyBooks() {
                               {publishing === book.book_id ? "..." : "Publish"}
                             </button>
                           )}
-                          <button className="action-btn-small delete" onClick={() => handleDelete(book.book_id)}>Delete</button>
+                          {!book.deleted_at && (
+                            <button className="action-btn-small delete" onClick={() => handleDelete(book.book_id)}>Delete</button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -150,15 +156,15 @@ export default function MyBooks() {
           <div className="books-summary">
             <div className="summary-item">
               <div className="summary-label">Total Books</div>
-              <div className="summary-value">{books.length}</div>
+              <div className="summary-value">{books.filter(b => !b.deleted_at).length}</div>
             </div>
             <div className="summary-item">
               <div className="summary-label">Published</div>
-              <div className="summary-value">{books.filter(b => b.status === "published").length}</div>
+              <div className="summary-value">{books.filter(b => b.status === "published" && !b.deleted_at).length}</div>
             </div>
             <div className="summary-item">
               <div className="summary-label">Drafts</div>
-              <div className="summary-value">{books.filter(b => b.status === "draft").length}</div>
+              <div className="summary-value">{books.filter(b => b.status === "draft" && !b.deleted_at).length}</div>
             </div>
             <div className="summary-item">
               <div className="summary-label">Total Earnings</div>

@@ -136,6 +136,11 @@ export default function MyLibrary() {
                   {/* Info */}
                   <div className="lib-info">
                     <h3 className="lib-book-title">{book.bookTitle}</h3>
+                    {book.isDeleted && (
+                      <p style={{ fontSize: 11, color: "#9ca3af", background: "#f3f4f6", padding: "2px 8px", borderRadius: 10, display: "inline-block", marginBottom: 4 }}>
+                        No longer publicly available
+                      </p>
+                    )}
 
                     {/* Access status */}
                     {!isRent && (

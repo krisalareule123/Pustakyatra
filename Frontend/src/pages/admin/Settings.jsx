@@ -1,5 +1,32 @@
 import { useState } from "react";
 
+// Defined outside component to prevent remount on every render
+const Field = ({ label, ...props }) => (
+  <div style={{ marginBottom: 14 }}>
+    <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#555", marginBottom: 5 }}>{label}</label>
+    <input {...props} style={{ width: "100%", padding: "10px 12px", border: "1px solid #ddd",
+      borderRadius: 8, fontSize: 13, outline: "none", boxSizing: "border-box" }} />
+  </div>
+);
+
+const Section = ({ title, sub, children, onSave, saved }) => (
+  <div className="admin-card" style={{ marginBottom: 20 }}>
+    <div className="admin-card-header">
+      <div>
+        <h3 className="admin-card-title">{title}</h3>
+        {sub && <p style={{ margin: "2px 0 0", fontSize: 12, color: "#888" }}>{sub}</p>}
+      </div>
+    </div>
+    <div style={{ padding: "20px 22px" }}>
+      {children}
+      <button className="admin-btn admin-btn-primary" style={{ marginTop: 16 }} onClick={onSave}>
+        Save Changes
+      </button>
+      {saved === title && <span style={{ marginLeft: 12, fontSize: 12, color: "#1e6b35", fontWeight: 600 }}>✓ Saved</span>}
+    </div>
+  </div>
+);
+
 export default function AdminSettings() {
   const [profile, setProfile] = useState({ name: "Admin", email: "admin@pustakyatra.com" });
   const [pwd, setPwd] = useState({ current: "", newPwd: "", confirm: "" });
@@ -11,50 +38,37 @@ export default function AdminSettings() {
     setTimeout(() => setSaved(""), 2500);
   };
 
-  const Section = ({ title, sub, children, onSave }) => (
-    <div className="admin-card" style={{ marginBottom: 20 }}>
-      <div className="admin-card-header">
-        <div>
-          <h3 className="admin-card-title">{title}</h3>
-          {sub && <p style={{ margin: "2px 0 0", fontSize: 12, color: "#888" }}>{sub}</p>}
-        </div>
-      </div>
-      <div style={{ padding: "20px 22px" }}>
-        {children}
-        <button className="admin-btn admin-btn-primary" style={{ marginTop: 16 }} onClick={onSave}>
-          Save Changes
-        </button>
-        {saved === title && <span style={{ marginLeft: 12, fontSize: 12, color: "#1e6b35", fontWeight: 600 }}>✓ Saved</span>}
-      </div>
-    </div>
-  );
-
-  const Field = ({ label, ...props }) => (
-    <div style={{ marginBottom: 14 }}>
-      <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#555", marginBottom: 5 }}>{label}</label>
-      <input {...props} style={{ width: "100%", padding: "10px 12px", border: "1px solid #ddd",
-        borderRadius: 8, fontSize: 13, outline: "none", boxSizing: "border-box" }} />
-    </div>
-  );
-
   return (
     <>
-      <Section title="Admin Profile" sub="Update your admin account details" onSave={() => save("Admin Profile")}>
+      <Section title="Admin Profile" sub="Update your admin account details" onSave={() => save("Admin Profile")} saved={saved}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
           <Field label="Full Name" value={profile.name} onChange={e => setProfile(p => ({ ...p, name: e.target.value }))} />
           <Field label="Email Address" value={profile.email} readOnly style={{ background: "#f9f9f9", color: "#999" }} />
         </div>
       </Section>
 
-      <Section title="Change Password" sub="Keep your admin account secure" onSave={() => save("Change Password")}>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14 }}>
-          <Field label="Current Password" type="password" value={pwd.current} onChange={e => setPwd(p => ({ ...p, current: e.target.value }))} />
-          <Field label="New Password"     type="password" value={pwd.newPwd}  onChange={e => setPwd(p => ({ ...p, newPwd: e.target.value }))} />
-          <Field label="Confirm Password" type="password" value={pwd.confirm} onChange={e => setPwd(p => ({ ...p, confirm: e.target.value }))} />
+      <div className="admin-card" style={{ marginBottom: 20 }}>
+        <div className="admin-card-header">
+          <div>
+            <h3 className="admin-card-title">Change Password</h3>
+            <p style={{ margin: "2px 0 0", fontSize: 12, color: "#888" }}>Keep your admin account secure</p>
+          </div>
         </div>
-      </Section>
+        <div style={{ padding: "20px 22px" }}>
+          <form onSubmit={e => { e.preventDefault(); save("Change Password"); }}>
+            <input type="text" name="username" autoComplete="username" value="admin" readOnly style={{ display: "none" }} />
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14 }}>
+              <Field label="Current Password" type="password" value={pwd.current} onChange={e => setPwd(p => ({ ...p, current: e.target.value }))} autoComplete="current-password" />
+              <Field label="New Password"     type="password" value={pwd.newPwd}  onChange={e => setPwd(p => ({ ...p, newPwd: e.target.value }))} autoComplete="new-password" />
+              <Field label="Confirm Password" type="password" value={pwd.confirm} onChange={e => setPwd(p => ({ ...p, confirm: e.target.value }))} autoComplete="new-password" />
+            </div>
+            <button type="submit" className="admin-btn admin-btn-primary" style={{ marginTop: 16 }}>Save Changes</button>
+            {saved === "Change Password" && <span style={{ marginLeft: 12, fontSize: 12, color: "#1e6b35", fontWeight: 600 }}>✓ Saved</span>}
+          </form>
+        </div>
+      </div>
 
-      <Section title="Notification Preferences" sub="Choose which alerts you receive" onSave={() => save("Notification Preferences")}>
+      <Section title="Notification Preferences" sub="Choose which alerts you receive" onSave={() => save("Notification Preferences")} saved={saved}>
         {[
           { key: "emailNotifs",   label: "Email notifications for new registrations" },
           { key: "reviewAlerts",  label: "Alert when a new review is submitted" },
@@ -68,7 +82,7 @@ export default function AdminSettings() {
         ))}
       </Section>
 
-      <Section title="System Information" sub="Platform details" onSave={() => {}}>
+      <Section title="System Information" sub="Platform details" onSave={() => {}} saved={saved}>
         {[
           ["Platform", "Pustakyatra — Nepali Digital Library"],
           ["Version",  "1.0.0"],

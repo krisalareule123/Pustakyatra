@@ -171,7 +171,7 @@ const updateBookPdf = (req, res) => {
 const getBooks = (req, res) => {
   try {
     const { category, language, search, authorId } = req.query;
-    let where = "WHERE (b.status = 'published' OR b.status IS NULL)";
+    let where = "WHERE (b.status = 'published' OR b.status IS NULL) AND b.deleted_at IS NULL";
     const params = [];
 
     if (authorId) { where += " AND b.author_id = ?"; params.push(parseInt(authorId)); }
@@ -215,7 +215,7 @@ const getBook = (req, res) => {
               COALESCE(a.full_name, b.author) AS author_name
        FROM books b
        LEFT JOIN authors a ON a.author_id = b.author_id
-       WHERE b.book_id = ? AND (b.status = 'published' OR b.status IS NULL)`,
+       WHERE b.book_id = ? AND (b.status = 'published' OR b.status IS NULL) AND b.deleted_at IS NULL`,
       [bookId],
       (err, results) => {
         if (err || !results.length) {
@@ -364,28 +364,25 @@ function createAuthorNotification(authorId, bookId, type, message, readerId = nu
   );
 }
 
-// DELETE /api/books/:bookId — author can delete their own book
+// DELETE /api/books/:bookId — soft delete (sets deleted_at, never removes from DB)
 const deleteBook = (req, res) => {
   const authorId = req.user.author_id;
   const { bookId } = req.params;
-  // Only allow if no paid orders exist for this book
+
   db.query(
-    `SELECT COUNT(*) AS cnt FROM order_items oi
-     JOIN orders o ON o.order_id = oi.order_id
-     WHERE oi.book_id = ? AND o.status = 'paid'`,
-    [bookId],
+    "SELECT book_id FROM books WHERE book_id = ? AND author_id = ?",
+    [bookId, authorId],
     (err, rows) => {
       if (err) return res.status(500).json({ success: false, message: "Server error" });
-      if (rows[0].cnt > 0) {
-        return res.status(400).json({ success: false, message: "Cannot delete a book that has been purchased by readers." });
-      }
+      if (!rows.length) return res.status(404).json({ success: false, message: "Book not found" });
+
       db.query(
-        "DELETE FROM books WHERE book_id = ? AND author_id = ?",
+        "UPDATE books SET deleted_at = NOW() WHERE book_id = ? AND author_id = ?",
         [bookId, authorId],
         (err2, result) => {
           if (err2) return res.status(500).json({ success: false, message: "Server error" });
           if (result.affectedRows === 0) return res.status(404).json({ success: false, message: "Book not found" });
-          res.json({ success: true, message: "Book deleted successfully" });
+          res.json({ success: true, message: "Book removed successfully." });
         }
       );
     }

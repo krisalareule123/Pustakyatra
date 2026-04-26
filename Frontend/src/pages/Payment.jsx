@@ -13,10 +13,16 @@ export default function Payment() {
   const existingOrderId = location.state?.orderId || null;
 
   const [orderId, setOrderId] = useState(existingOrderId);
-  const [loading, setLoading] = useState(!existingOrderId); // skip loading if order already exists
+  const [loading, setLoading] = useState(!existingOrderId);
   const [esewaLoading, setEsewaLoading] = useState(false);
   const [redirecting, setRedirecting] = useState(false);
   const [error, setError] = useState("");
+
+  // Promo code state
+  const [promoCode, setPromoCode] = useState("");
+  const [promoResult, setPromoResult] = useState(null); // { discount_amount, discounted_total, promo_code_id, code }
+  const [promoError, setPromoError] = useState("");
+  const [promoLoading, setPromoLoading] = useState(false);
 
   // Guard against double-creation in React StrictMode / double mount
   const orderCreated = useRef(false);
@@ -42,7 +48,12 @@ export default function Payment() {
 
     const createOrder = async () => {
       try {
-        const response = await orderAPI.createOrder(token, { items, totalAmount });
+        const response = await orderAPI.createOrder(token, {
+          items, totalAmount,
+          promoCodeId: promoResult?.promo_code_id || null,
+          discountAmount: promoResult?.discount_amount || 0,
+          discountedTotal: promoResult?.discounted_total || null,
+        });
         if (response.success) {
           setOrderId(response.order.orderId);
         }
@@ -57,6 +68,34 @@ export default function Payment() {
     createOrder();
   }, []);
 
+  // Apply promo code
+  const handleApplyPromo = async () => {
+    if (!promoCode.trim()) return;
+    setPromoLoading(true); setPromoError(""); setPromoResult(null);
+    try {
+      const token = localStorage.getItem("token") || localStorage.getItem("authToken");
+      const res = await fetch("http://localhost:5001/api/readers/promo/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ code: promoCode.trim(), items, cartTotal: totalAmount })
+      }).then(r => r.json());
+
+      if (res.success) {
+        setPromoResult(res);
+      } else {
+        setPromoError(res.message || "Invalid promo code.");
+      }
+    } catch {
+      setPromoError("Failed to validate promo code.");
+    } finally {
+      setPromoLoading(false);
+    }
+  };
+
+  const handleRemovePromo = () => {
+    setPromoResult(null); setPromoCode(""); setPromoError("");
+  };
+
   // Redirect to eSewa — disable button immediately to prevent double clicks
   const handleEsewaPayment = async () => {
     if (!orderId || redirecting) return;
@@ -67,7 +106,7 @@ export default function Payment() {
 
     try {
       const token = localStorage.getItem("token") || localStorage.getItem("authToken");
-      const response = await orderAPI.initiateEsewa(token, orderId, totalAmount, items);
+      const response = await orderAPI.initiateEsewa(token, orderId, promoResult ? promoResult.discounted_total : totalAmount, items);
 
       if (!response.success) {
         setError("Failed to initiate payment. Please try again.");
@@ -172,9 +211,49 @@ export default function Payment() {
             📚 You will receive access to your e-books after payment is confirmed.
           </div>
 
+          {/* Promo Code Input */}
+          <div style={{ margin: "16px 0", padding: "16px", background: "#f9fafb", borderRadius: 10, border: "1px solid #e5e7eb" }}>
+            <p style={{ margin: "0 0 10px", fontWeight: 600, fontSize: 14, color: "#374151" }}>🏷️ Have a promo code?</p>
+            {promoResult ? (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#d1fae5", padding: "10px 14px", borderRadius: 8 }}>
+                <div>
+                  <span style={{ fontWeight: 700, color: "#065f46", fontFamily: "monospace" }}>{promoResult.code}</span>
+                  <span style={{ marginLeft: 10, color: "#065f46", fontSize: 13 }}>
+                    — Rs {promoResult.discount_amount.toFixed(2)} off applied!
+                  </span>
+                </div>
+                <button onClick={handleRemovePromo} style={{ background: "none", border: "none", color: "#991b1b", cursor: "pointer", fontWeight: 600, fontSize: 13 }}>Remove</button>
+              </div>
+            ) : (
+              <div style={{ display: "flex", gap: 8 }}>
+                <input
+                  value={promoCode}
+                  onChange={e => { setPromoCode(e.target.value.toUpperCase()); setPromoError(""); }}
+                  placeholder="Enter promo code"
+                  style={{ flex: 1, padding: "9px 12px", border: "1px solid #d1d5db", borderRadius: 8, fontSize: 14, fontFamily: "monospace", textTransform: "uppercase" }}
+                  onKeyDown={e => e.key === "Enter" && handleApplyPromo()}
+                />
+                <button onClick={handleApplyPromo} disabled={promoLoading || !promoCode.trim()}
+                  style={{ background: "#4f46e5", color: "#fff", border: "none", borderRadius: 8, padding: "9px 18px", fontWeight: 600, fontSize: 14, cursor: "pointer", whiteSpace: "nowrap" }}>
+                  {promoLoading ? "..." : "Apply"}
+                </button>
+              </div>
+            )}
+            {promoError && <p style={{ margin: "8px 0 0", color: "#dc2626", fontSize: 13 }}>{promoError}</p>}
+          </div>
+
           <div className="payment-total-row">
             <span>Total</span>
-            <span className="payment-total-amount">Rs {totalAmount.toFixed(2)}</span>
+            <span className="payment-total-amount">
+              {promoResult ? (
+                <>
+                  <span style={{ textDecoration: "line-through", color: "#9ca3af", fontSize: 16, marginRight: 8 }}>Rs {totalAmount.toFixed(2)}</span>
+                  Rs {promoResult.discounted_total.toFixed(2)}
+                </>
+              ) : (
+                `Rs ${totalAmount.toFixed(2)}`
+              )}
+            </span>
           </div>
 
           <div className="payment-method-section">
@@ -269,7 +348,16 @@ export default function Payment() {
 
             <div className="summary-row summary-total">
               <span>Total</span>
-              <span>Rs {totalAmount.toFixed(2)}</span>
+              <span>
+                {promoResult ? (
+                  <>
+                    <span style={{ textDecoration: "line-through", color: "#9ca3af", fontSize: 13, marginRight: 6 }}>Rs {totalAmount.toFixed(2)}</span>
+                    Rs {promoResult.discounted_total.toFixed(2)}
+                  </>
+                ) : (
+                  `Rs ${totalAmount.toFixed(2)}`
+                )}
+              </span>
             </div>
           </div>
         </div>

@@ -10,6 +10,7 @@ const NAV = [
   { path: "/admin/payments",       icon: "💳", label: "Payments" },
   { path: "/admin/reviews",        icon: "⭐", label: "Reviews" },
   { path: "/admin/analytics",      icon: "📈", label: "Analytics" },
+  { path: "/admin/promo-codes",    icon: "🏷️", label: "Promo Codes" },
   { path: "/admin/notifications",  icon: "🔔", label: "Notifications" },
   { path: "/admin/settings",       icon: "⚙️", label: "Settings" },
 ];
@@ -22,6 +23,7 @@ const PAGE_META = {
   "/admin/payments":      { title: "Payments",       sub: "View all transactions and revenue" },
   "/admin/reviews":       { title: "Reviews",        sub: "Moderate reader reviews" },
   "/admin/analytics":     { title: "Analytics",      sub: "Platform performance metrics and insights" },
+  "/admin/promo-codes":   { title: "Promo Codes",    sub: "Review and approve author promo codes" },
   "/admin/notifications": { title: "Notifications",  sub: "System activity and alerts" },
   "/admin/settings":      { title: "Settings",       sub: "Admin preferences and configuration" },
 };

@@ -30,6 +30,7 @@ export default function AuthorSidebar() {
     { path: "/author/books",          icon: "▤", label: "My Books"        },
     { path: "/author/add-book",       icon: "+", label: "Add Book"        },
     { path: "/author/sales",          icon: "₹", label: "Sales & Earnings"},
+    { path: "/author/promo-codes",    icon: "🏷️", label: "Promo Codes"    },
     { path: "/author/reviews",        icon: "★", label: "Reviews"         },
     { path: "/author/notifications",  icon: "🔔", label: "Notifications"  },
     { path: "/author/profile",        icon: "◉", label: "Profile"         },

@@ -10,6 +10,7 @@ const {
   getAdminReviews, updateReviewStatus, deleteAdminReview,
   getAdminNotifications, markAllAdminNotificationsRead, markAdminNotificationRead
 } = require("../controllers/adminController");
+const { getAdminPromoCodes, updatePromoCodeStatus } = require("../controllers/promoController");
 
 const router = express.Router();
 
@@ -49,5 +50,9 @@ router.patch("/notifications/:id/read", authAdmin, markAdminNotificationRead);
 router.get("/reviews",                  authAdmin, getAdminReviews);
 router.patch("/reviews/:id/status",     authAdmin, updateReviewStatus);
 router.delete("/reviews/:id",           authAdmin, deleteAdminReview);
+
+// Promo Codes
+router.get("/promo-codes",                  authAdmin, getAdminPromoCodes);
+router.patch("/promo-codes/:id/status",     authAdmin, updatePromoCodeStatus);
 
 module.exports = router;

@@ -934,7 +934,33 @@ const getReaderNotifications = (req, res) => {
       const priority = { expired: 0, expiring: 1, rent: 2, payment: 3 };
       notifications.sort((a, b) => (priority[a.type] ?? 9) - (priority[b.type] ?? 9) || new Date(b.time) - new Date(a.time));
 
-      res.status(200).json({ success: true, notifications });
+      // Also fetch promo reward notifications from reader_notifications table
+      db.query(
+        `SELECT notification_id, type, message, is_read, created_at
+         FROM reader_notifications
+         WHERE reader_id = ?
+         ORDER BY created_at DESC
+         LIMIT 20`,
+        [readerId],
+        (err2, promoRows) => {
+          if (!err2 && promoRows) {
+            promoRows.forEach(n => {
+              notifications.unshift({
+                id: `promo_${n.notification_id}`,
+                type: "promo_reward",
+                icon: "🎁",
+                title: "Promo Code Reward",
+                message: n.message,
+                time: n.created_at,
+                color: "#6d28d9",
+                bg: "#ede9fe",
+                is_read: n.is_read,
+              });
+            });
+          }
+          res.status(200).json({ success: true, notifications });
+        }
+      );
     }
   );
 };

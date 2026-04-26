@@ -17,6 +17,7 @@ const {
 } = require("../controllers/readerController");
 const { uploadBook, uploadAvatar } = require("../config/upload");
 const authReader = require("../middleware/authReader");
+const { validatePromoCode } = require("../controllers/promoController");
 
 const router = express.Router();
 
@@ -56,6 +57,9 @@ router.post("/logout", authReader, (req, res) => {
 });
 router.get("/stats", authReader, getReaderStats);
 router.get("/notifications", authReader, getReaderNotifications);
+
+// Promo code validation
+router.post("/promo/validate", authReader, validatePromoCode);
 
 // GET /api/readers/ping — updates last_seen (heartbeat)
 router.get("/ping", authReader, (req, res) => {

@@ -462,7 +462,7 @@ function getAuthorBooks(req, res) {
   const query = `
     SELECT
       b.book_id, b.title, b.nepali_title, b.status, b.cover_image,
-      b.buy_price, b.rent_price, b.created_at,
+      b.buy_price, b.rent_price, b.created_at, b.deleted_at,
       COUNT(DISTINCT CASE WHEN o.status = 'paid' THEN oi.order_id END) AS sales,
       COALESCE(SUM(CASE WHEN o.status = 'paid' THEN oi.author_earnings ELSE 0 END), 0) AS earnings
     FROM books b

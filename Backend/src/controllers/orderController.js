@@ -18,7 +18,7 @@ const generateOrderId = () => {
 const createOrder = (req, res) => {
   try {
     const readerId = req.user.reader_id;
-    const { items, totalAmount } = req.body;
+    const { items, totalAmount, promoCodeId, discountAmount, discountedTotal } = req.body;
 
     if (!items || items.length === 0 || !totalAmount) {
       return res.status(400).json({ success: false, message: "Please provide order items and total amount" });
@@ -55,8 +55,14 @@ const createOrder = (req, res) => {
 
         // Step 3: Create the order
         db.query(
-          "INSERT INTO orders (reader_id, total_amount, status) VALUES (?, ?, 'pending_payment')",
-          [readerId, totalAmount],
+          `INSERT INTO orders (reader_id, total_amount, promo_code_id, discount_amount, discounted_total, status)
+           VALUES (?, ?, ?, ?, ?, 'pending_payment')`,
+          [
+            readerId, totalAmount,
+            promoCodeId || null,
+            discountAmount || 0,
+            discountedTotal || null
+          ],
           (err, result) => {
             if (err) {
               console.error("DB error creating order:", err);
@@ -297,14 +303,17 @@ const initiateEsewa = (req, res) => {
           return res.status(404).json({ success: false, message: "Order not found or already processed" });
         }
 
+        // Use discounted_total if a promo was applied, otherwise use total_amount
+        const orderRow = results[0];
+        const effectiveAmount = orderRow.discounted_total != null
+          ? parseFloat(orderRow.discounted_total)
+          : parseFloat(totalAmount);
+
         // eSewa v2: transaction_uuid must be alphanumeric/hyphen, no special chars
         const transactionUuid = `PK${orderId}T${Date.now()}`;
         const productCode = process.env.ESEWA_PRODUCT_CODE;
 
-        // eSewa v2: amount fields must be plain numbers (no trailing zeros issues)
-        // total_amount = amount + tax + service_charge + delivery_charge
-        // With all charges = 0, total_amount must equal amount exactly
-        const amount = parseFloat(totalAmount).toFixed(2);
+        const amount = effectiveAmount.toFixed(2);
         const taxAmount = "0";
         const serviceCharge = "0";
         const deliveryCharge = "0";
@@ -482,6 +491,14 @@ const verifyEsewa = async (req, res) => {
               (err3) => { if (err3) console.error("Error granting book access:", err3.message); }
             );
 
+            // Step 6b: Record promo usage if promo was applied (non-blocking)
+            db.query("SELECT promo_code_id FROM orders WHERE order_id = ?", [orderId], (errP, pRows) => {
+              if (!errP && pRows?.[0]?.promo_code_id) {
+                const { recordPromoUsage } = require("./promoController");
+                recordPromoUsage(pRows[0].promo_code_id, readerId, orderId);
+              }
+            });
+
             // Step 7: Notify authors + admin for each purchased/rented book (non-blocking)
             const { createAuthorNotification } = require("./bookController");
             const { createAdminNotification }  = require("./adminController");
@@ -579,6 +596,7 @@ const getLibrary = (req, res) => {
         oi.access_expires_at,
         o.order_id,
         o.paid_at,
+        b.deleted_at AS book_deleted_at,
         CASE
           WHEN oi.item_type = 'rent' AND oi.access_expires_at IS NOT NULL
             THEN GREATEST(0, DATEDIFF(oi.access_expires_at, NOW()))
@@ -586,6 +604,7 @@ const getLibrary = (req, res) => {
         END AS remaining_days
       FROM orders o
       JOIN order_items oi ON o.order_id = oi.order_id
+      LEFT JOIN books b ON b.book_id = oi.book_id
       WHERE o.reader_id = ? AND o.status = 'paid'
         AND (
           oi.item_type = 'buy'
@@ -608,7 +627,8 @@ const getLibrary = (req, res) => {
         rentExpiresAt: r.access_expires_at,
         remainingDays: r.remaining_days,
         orderId: r.order_id,
-        paidAt: r.paid_at
+        paidAt: r.paid_at,
+        isDeleted: !!r.book_deleted_at
       }));
 
       res.status(200).json({ success: true, library });
@@ -1013,6 +1033,14 @@ const simulatePayment = (req, res) => {
            WHERE order_id = ?`,
           [orderId], () => {}
         );
+
+        // Record promo usage if applied (non-blocking)
+        db.query("SELECT promo_code_id FROM orders WHERE order_id = ?", [orderId], (errP, pRows) => {
+          if (!errP && pRows?.[0]?.promo_code_id) {
+            const { recordPromoUsage } = require("./promoController");
+            recordPromoUsage(pRows[0].promo_code_id, readerId, orderId);
+          }
+        });
 
         return fetchAndReturnOrder(orderId, fakeTransactionCode, res);
       }

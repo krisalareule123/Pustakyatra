@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import Navbar from "./components/common/Navbar.jsx";
 import Footer from "./components/common/Footer.jsx";
 import CartPanel from "./components/common/CartPanel.jsx";
+import ScrollToTop from "./components/ScrollToTop.jsx";
 
 import Home from "./pages/Home.jsx";
 import Register from "./pages/Register.jsx";
@@ -32,6 +33,7 @@ import Sales from "./pages/author/Sales.jsx";
 import AuthorProfile from "./pages/author/AuthorProfile.jsx";
 import AuthorReviews from "./pages/author/Reviews.jsx";
 import AuthorNotifications from "./pages/author/Notifications.jsx";
+import AuthorPromoCodes from "./pages/author/PromoCodes.jsx";
 
 // Admin Panel
 import AdminLogin from "./pages/admin/AdminLogin.jsx";
@@ -45,6 +47,7 @@ import AdminReviews from "./pages/admin/Reviews.jsx";
 import AdminNotifications from "./pages/admin/Notifications.jsx";
 import AdminSettings from "./pages/admin/Settings.jsx";
 import AdminAnalytics from "./pages/admin/Analytics.jsx";
+import AdminPromoCodes from "./pages/admin/PromoCodes.jsx";
 
 // Author Layout Wrapper Component
 function AuthorLayoutWrapper() {
@@ -72,6 +75,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
+      <ScrollToTop />
       <CartPanel />
       <Routes>
         {/* Author Panel Routes - NO Navbar/Footer */}
@@ -82,6 +86,7 @@ export default function App() {
           <Route path="sales" element={<Sales />} />
           <Route path="reviews"       element={<AuthorReviews />} />
           <Route path="notifications" element={<AuthorNotifications />} />
+          <Route path="promo-codes"   element={<AuthorPromoCodes />} />
           <Route path="profile"       element={<AuthorProfile />} />
           {/* Catch unknown /author/* paths — redirect to login */}
           <Route path="*" element={<Navigate to="/login" replace />} />
@@ -101,6 +106,7 @@ export default function App() {
           <Route path="payments"      element={<AdminPayments />} />
           <Route path="reviews"       element={<AdminReviews />} />
           <Route path="analytics"     element={<AdminAnalytics />} />
+          <Route path="promo-codes"   element={<AdminPromoCodes />} />
           <Route path="notifications" element={<AdminNotifications />} />
           <Route path="settings"      element={<AdminSettings />} />
           <Route path="*"             element={<Navigate to="/admin/dashboard" replace />} />
@@ -109,6 +115,7 @@ export default function App() {
         {/* Reader Routes with Navbar & Footer */}
         <Route path="*" element={
           <>
+            <ScrollToTop />
             <Navbar />
             <Routes>
               <Route path="/" element={<Home />} />

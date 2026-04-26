@@ -247,6 +247,97 @@ async function resetUserStatus() {
   const result = await q("UPDATE readers SET is_active = 0");
   console.log(`✅ Reset ${result.affectedRows} readers to inactive`);
 }
+
+// ── create-promo-tables ───────────────────────────────────────────────────────
+async function createPromoTables() {
+  await new Promise((resolve, reject) => {
+    db.query(`
+      CREATE TABLE IF NOT EXISTS promo_codes (
+        promo_code_id        INT PRIMARY KEY AUTO_INCREMENT,
+        author_id            INT NOT NULL,
+        code                 VARCHAR(50) NOT NULL,
+        discount_type        ENUM('percentage','flat') NOT NULL,
+        discount_value       DECIMAL(10,2) NOT NULL,
+        promo_scope          ENUM('all_books','specific_book','rent_only') NOT NULL DEFAULT 'all_books',
+        book_id              INT NULL,
+        occasion             ENUM('new_launch','dashain','tihar','new_year','teej','first_reader','loyalty','review_reward','low_sales','custom') NOT NULL,
+        expiry_date          DATE NOT NULL,
+        usage_limit          INT NOT NULL DEFAULT 100,
+        per_reader_limit     INT NOT NULL DEFAULT 1,
+        minimum_order_amount DECIMAL(10,2) NOT NULL DEFAULT 0,
+        usage_count          INT NOT NULL DEFAULT 0,
+        status               ENUM('pending','active','disabled') NOT NULL DEFAULT 'pending',
+        created_at           TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at           TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_code (code),
+        FOREIGN KEY (author_id) REFERENCES authors(author_id) ON DELETE CASCADE,
+        FOREIGN KEY (book_id)   REFERENCES books(book_id)     ON DELETE SET NULL
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `, (err) => err ? reject(err) : resolve());
+  });
+  console.log("✅ promo_codes table ready");
+
+  await new Promise((resolve, reject) => {
+    db.query(`
+      CREATE TABLE IF NOT EXISTS promo_code_usages (
+        usage_id      INT PRIMARY KEY AUTO_INCREMENT,
+        promo_code_id INT NOT NULL,
+        reader_id     INT NOT NULL,
+        order_id      INT NOT NULL,
+        used_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (promo_code_id) REFERENCES promo_codes(promo_code_id) ON DELETE CASCADE,
+        FOREIGN KEY (reader_id)     REFERENCES readers(reader_id)         ON DELETE CASCADE,
+        FOREIGN KEY (order_id)      REFERENCES orders(order_id)           ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `, (err) => err ? reject(err) : resolve());
+  });
+  console.log("✅ promo_code_usages table ready");
+
+  await new Promise((resolve, reject) => {
+    db.query(`
+      CREATE TABLE IF NOT EXISTS reader_notifications (
+        notification_id INT PRIMARY KEY AUTO_INCREMENT,
+        reader_id       INT NOT NULL,
+        type            VARCHAR(50) NOT NULL,
+        message         VARCHAR(500) NOT NULL,
+        related_id      INT NULL,
+        is_read         TINYINT(1) NOT NULL DEFAULT 0,
+        created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (reader_id) REFERENCES readers(reader_id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `, (err) => err ? reject(err) : resolve());
+  });
+  console.log("✅ reader_notifications table ready");
+
+  for (const [col, sql] of [
+    ["promo_code_id",    "ALTER TABLE orders ADD COLUMN IF NOT EXISTS promo_code_id    INT NULL"],
+    ["discount_amount",  "ALTER TABLE orders ADD COLUMN IF NOT EXISTS discount_amount  DECIMAL(10,2) NULL DEFAULT 0"],
+    ["discounted_total", "ALTER TABLE orders ADD COLUMN IF NOT EXISTS discounted_total DECIMAL(10,2) NULL"],
+  ]) {
+    await new Promise(resolve => {
+      db.query(sql, err => {
+        if (err && err.code !== "ER_DUP_FIELDNAME") console.error(`  ❌ ${col}: ${err.message}`);
+        else console.log(`  ✅ orders.${col} ready`);
+        resolve();
+      });
+    });
+  }
+
+  await new Promise(resolve => {
+    db.query(
+      `ALTER TABLE orders ADD CONSTRAINT fk_orders_promo FOREIGN KEY (promo_code_id) REFERENCES promo_codes(promo_code_id) ON DELETE SET NULL`,
+      err => { if (err && err.code !== "ER_DUP_KEYNAME" && err.code !== "ER_FK_DUP_NAME") console.error("FK:", err.message); resolve(); }
+    );
+  });
+
+  console.log("\n✅ All promo tables ready. Restart your backend server.");
+}
+// ── add-soft-delete ───────────────────────────────────────────────────────────
+async function addSoftDelete() {
+  await q(`ALTER TABLE books ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP NULL DEFAULT NULL`);
+  console.log("✅ books.deleted_at column ready");
+}
+
 const commands = { inspect, describe, migrate, "clean-books": cleanBooks,
                    "fix-book-status": fixBookStatus, "fix-passwords": fixPasswords,
                    "cleanup-draft-orders": cleanupDraftOrders,
@@ -254,7 +345,9 @@ const commands = { inspect, describe, migrate, "clean-books": cleanBooks,
                    "create-admin-notifications": createAdminNotifications,
                    "fix-admin-password": fixAdminPassword,
                    "add-reader-status": addReaderStatus,
-                   "reset-user-status": resetUserStatus };
+                   "reset-user-status": resetUserStatus,
+                   "create-promo-tables": createPromoTables,
+                   "add-soft-delete": addSoftDelete };
 
 if (!cmd || !commands[cmd]) {
   console.log("Usage: node Backend/scripts/db-tools.js <command>\n");

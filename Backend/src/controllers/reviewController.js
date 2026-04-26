@@ -120,6 +120,10 @@ const addReview = async (req, res) => {
               review_text: reviewText || null
             }
           });
+
+          // Check review reward promo (fire-and-forget)
+          const { checkReviewReward } = require("./promoController");
+          checkReviewReward(bookId, readerId);
         });
       }
     });
