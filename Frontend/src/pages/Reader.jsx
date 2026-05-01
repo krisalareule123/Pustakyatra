@@ -43,6 +43,13 @@ export default function Reader() {
   const [bookmarkMsg, setBookmarkMsg]     = useState("");
   const [showBookmarks, setShowBookmarks] = useState(false);
 
+  // Notes state
+  const [notes, setNotes]           = useState([]);
+  const [showNotes, setShowNotes]   = useState(false);
+  const [noteText, setNoteText]     = useState("");
+  const [savingNote, setSavingNote] = useState(false);
+  const [noteMsg, setNoteMsg]       = useState("");
+
   const token = localStorage.getItem("token") || localStorage.getItem("authToken");
 
   // Measure container width for responsive PDF rendering
@@ -88,6 +95,47 @@ export default function Reader() {
       if (res.success) setBookmarks(res.bookmarks || []);
     } catch { /* non-critical */ }
   }, [token]);
+
+  // Load notes
+  const loadNotes = useCallback(async (bId) => {
+    try {
+      const res = await fetch(`${API_BASE}/readers/notes/${bId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      }).then(r => r.json());
+      if (res.success) setNotes(res.notes || []);
+    } catch { /* non-critical */ }
+  }, [token]);
+
+  // Save note for current page
+  const saveNote = async () => {
+    if (!noteText.trim() || !bookId) return;
+    setSavingNote(true);
+    try {
+      const res = await fetch(`${API_BASE}/readers/notes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ book_id: bookId, page_number: pageNumber, note_text: noteText.trim() })
+      }).then(r => r.json());
+      if (res.success) {
+        setNotes(prev => [{ note_id: res.note_id, page_number: pageNumber, note_text: noteText.trim(), created_at: new Date().toISOString() }, ...prev]);
+        setNoteText("");
+        setNoteMsg("Note saved!");
+        setTimeout(() => setNoteMsg(""), 2000);
+      }
+    } catch { /* non-critical */ }
+    setSavingNote(false);
+  };
+
+  // Delete note
+  const deleteNote = async (noteId) => {
+    try {
+      await fetch(`${API_BASE}/readers/notes/${noteId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setNotes(prev => prev.filter(n => n.note_id !== noteId));
+    } catch { /* non-critical */ }
+  };
 
   // Toggle bookmark for current page
   const toggleBookmark = async () => {
@@ -149,6 +197,9 @@ export default function Reader() {
 
             // Load bookmarks
             await loadBookmarks(res.bookId);
+
+            // Load notes
+            await loadNotes(res.bookId);
           } catch (e) {
             console.error("PDF load error:", e);
           } finally {
@@ -282,6 +333,15 @@ export default function Reader() {
               🔖 Bookmarks {bookmarks.length > 0 ? `(${bookmarks.length})` : ""}
             </button>
           )}
+          {pdfBlobUrl && (
+            <button
+              className="reader-download-btn"
+              onClick={() => setShowNotes(s => !s)}
+              style={{ background: showNotes ? "#059669" : "rgba(255,255,255,0.1)" }}
+            >
+              📝 Notes {notes.length > 0 ? `(${notes.length})` : ""}
+            </button>
+          )}
         </div>
       </header>
 
@@ -313,6 +373,73 @@ export default function Reader() {
                       >
                         📄 Page {b.page_number}
                       </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Notes panel */}
+            {showNotes && (
+              <div className="reader-notes-panel">
+                <div className="reader-bookmark-header">
+                  <span>📝 Notes</span>
+                  <button onClick={() => setShowNotes(false)} style={{ background: "none", border: "none", color: "#aaa", cursor: "pointer", fontSize: 16 }}>✕</button>
+                </div>
+
+                {/* Add note for current page */}
+                <div className="reader-note-add">
+                  <p style={{ color: "#94a3b8", fontSize: 12, margin: "0 0 6px" }}>Add note for Page {pageNumber}</p>
+                  <textarea
+                    value={noteText}
+                    onChange={e => setNoteText(e.target.value)}
+                    placeholder="Write your note here..."
+                    rows={3}
+                    style={{
+                      width: "100%", padding: "8px 10px", borderRadius: 7, border: "1px solid rgba(255,255,255,0.15)",
+                      background: "rgba(255,255,255,0.06)", color: "#e2e8f0", fontSize: 13, resize: "vertical",
+                      outline: "none", boxSizing: "border-box", fontFamily: "inherit"
+                    }}
+                  />
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 6 }}>
+                    <button
+                      onClick={saveNote}
+                      disabled={savingNote || !noteText.trim()}
+                      style={{
+                        padding: "6px 18px", borderRadius: 6, border: "none",
+                        background: noteText.trim() ? "#059669" : "#333",
+                        color: "#fff", fontWeight: 700, fontSize: 13, cursor: noteText.trim() ? "pointer" : "default"
+                      }}
+                    >
+                      {savingNote ? "Saving..." : "Save Note"}
+                    </button>
+                    {noteMsg && <span style={{ color: "#86efac", fontSize: 12 }}>{noteMsg}</span>}
+                  </div>
+                </div>
+
+                {/* Notes list */}
+                {notes.length === 0 ? (
+                  <p style={{ color: "#888", fontSize: 13, marginTop: 12 }}>No notes yet. Add your first note above.</p>
+                ) : (
+                  <div className="reader-notes-list">
+                    {notes.map(n => (
+                      <div key={n.note_id} className="reader-note-item">
+                        <div className="reader-note-header">
+                          <button
+                            className="reader-note-page"
+                            onClick={() => { goToPage(n.page_number); setShowNotes(false); }}
+                          >
+                            📄 Page {n.page_number}
+                          </button>
+                          <button
+                            onClick={() => deleteNote(n.note_id)}
+                            style={{ background: "none", border: "none", color: "#f87171", cursor: "pointer", fontSize: 13, fontWeight: 700 }}
+                          >
+                            ✕
+                          </button>
+                        </div>
+                        <p className="reader-note-text">{n.note_text}</p>
+                      </div>
                     ))}
                   </div>
                 )}

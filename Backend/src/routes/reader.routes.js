@@ -101,6 +101,50 @@ router.delete("/bookmarks", authReader, (req, res) => {
     }
   );
 });
+// Notes
+router.get("/notes/:bookId", authReader, (req, res) => {
+  const readerId = req.user.reader_id;
+  const { bookId } = req.params;
+  db.query(
+    "SELECT note_id, page_number, note_text, created_at FROM reading_notes WHERE reader_id = ? AND book_id = ? ORDER BY page_number ASC, created_at DESC",
+    [readerId, bookId],
+    (err, rows) => {
+      if (err) return res.status(500).json({ success: false, message: "Server error" });
+      res.json({ success: true, notes: rows });
+    }
+  );
+});
+
+router.post("/notes", authReader, (req, res) => {
+  const readerId = req.user.reader_id;
+  const { book_id, page_number, note_text } = req.body;
+  if (!book_id || !page_number || !note_text?.trim()) {
+    return res.status(400).json({ success: false, message: "book_id, page_number and note_text required" });
+  }
+  db.query(
+    "INSERT INTO reading_notes (reader_id, book_id, page_number, note_text) VALUES (?, ?, ?, ?)",
+    [readerId, book_id, page_number, note_text.trim()],
+    (err, result) => {
+      if (err) return res.status(500).json({ success: false, message: "Server error" });
+      res.json({ success: true, note_id: result.insertId });
+    }
+  );
+});
+
+router.delete("/notes/:noteId", authReader, (req, res) => {
+  const readerId = req.user.reader_id;
+  const { noteId } = req.params;
+  db.query(
+    "DELETE FROM reading_notes WHERE note_id = ? AND reader_id = ?",
+    [noteId, readerId],
+    (err, result) => {
+      if (err) return res.status(500).json({ success: false, message: "Server error" });
+      if (result.affectedRows === 0) return res.status(404).json({ success: false, message: "Note not found" });
+      res.json({ success: true });
+    }
+  );
+});
+
 router.get("/reading-progress/:bookId", authReader, (req, res) => {
   const readerId = req.user.reader_id;
   const { bookId } = req.params;

@@ -438,3 +438,64 @@
   background: rgba(79, 70, 229, 0.6);
   color: #fff;
 }
+
+/* ── Notes panel ─────────────────────────────────────────────────── */
+.reader-notes-panel {
+  width: 100%;
+  max-width: 600px;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 10px;
+  padding: 14px 18px;
+}
+
+.reader-note-add {
+  margin-bottom: 14px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.reader-notes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.reader-note-item {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.reader-note-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.reader-note-page {
+  background: rgba(5, 150, 105, 0.25);
+  border: 1px solid rgba(5, 150, 105, 0.4);
+  border-radius: 5px;
+  color: #6ee7b7;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 10px;
+  cursor: pointer;
+}
+
+.reader-note-page:hover {
+  background: rgba(5, 150, 105, 0.45);
+}
+
+.reader-note-text {
+  color: #cbd5e1;
+  font-size: 13px;
+  margin: 0;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}

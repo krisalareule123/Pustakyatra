@@ -374,6 +374,25 @@ async function createBookmarks() {
   console.log("✅ bookmarks table ready");
 }
 
+// ── create-reading-notes ─────────────────────────────────────────────────────
+async function createReadingNotes() {
+  await new Promise((resolve, reject) => {
+    db.query(`
+      CREATE TABLE IF NOT EXISTS reading_notes (
+        note_id     INT AUTO_INCREMENT PRIMARY KEY,
+        reader_id   INT NOT NULL,
+        book_id     INT NOT NULL,
+        page_number INT NOT NULL,
+        note_text   TEXT NOT NULL,
+        created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (reader_id) REFERENCES readers(reader_id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `, (err) => err ? reject(err) : resolve());
+  });
+  console.log("✅ reading_notes table ready");
+}
+
 const commands = { inspect, describe, migrate, "clean-books": cleanBooks,
                    "fix-book-status": fixBookStatus, "fix-passwords": fixPasswords,
                    "cleanup-draft-orders": cleanupDraftOrders,
@@ -385,7 +404,8 @@ const commands = { inspect, describe, migrate, "clean-books": cleanBooks,
                    "create-promo-tables": createPromoTables,
                    "add-soft-delete": addSoftDelete,
                    "create-reading-progress": createReadingProgress,
-                   "create-bookmarks": createBookmarks };
+                   "create-bookmarks": createBookmarks,
+                   "create-reading-notes": createReadingNotes };
 
 if (!cmd || !commands[cmd]) {
   console.log("Usage: node Backend/scripts/db-tools.js <command>\n");
