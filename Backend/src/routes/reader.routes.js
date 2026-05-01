@@ -101,6 +101,57 @@ router.delete("/bookmarks", authReader, (req, res) => {
     }
   );
 });
+// Highlights
+router.get("/highlights/:bookId", authReader, (req, res) => {
+  const readerId = req.user.reader_id;
+  const { bookId } = req.params;
+  db.query(
+    "SELECT highlight_id, page_number, selected_text, rects, color, created_at FROM highlights WHERE reader_id = ? AND book_id = ? ORDER BY page_number ASC, created_at DESC",
+    [readerId, bookId],
+    (err, rows) => {
+      if (err) return res.status(500).json({ success: false, message: "Server error" });
+      // Parse rects JSON string back to array
+      const highlights = rows.map(r => ({
+        ...r,
+        rects: r.rects ? (typeof r.rects === "string" ? JSON.parse(r.rects) : r.rects) : null
+      }));
+      res.json({ success: true, highlights });
+    }
+  );
+});
+
+router.post("/highlights", authReader, (req, res) => {
+  const readerId = req.user.reader_id;
+  const { book_id, page_number, selected_text, rects, color } = req.body;
+  if (!book_id || !page_number || !selected_text?.trim()) {
+    return res.status(400).json({ success: false, message: "book_id, page_number and selected_text required" });
+  }
+  const rectsJson = rects ? JSON.stringify(rects) : null;
+  const highlightColor = color || "yellow";
+  db.query(
+    "INSERT INTO highlights (reader_id, book_id, page_number, selected_text, rects, color) VALUES (?, ?, ?, ?, ?, ?)",
+    [readerId, book_id, page_number, selected_text.trim(), rectsJson, highlightColor],
+    (err, result) => {
+      if (err) return res.status(500).json({ success: false, message: "Server error" });
+      res.json({ success: true, highlight_id: result.insertId });
+    }
+  );
+});
+
+router.delete("/highlights/:highlightId", authReader, (req, res) => {
+  const readerId = req.user.reader_id;
+  const { highlightId } = req.params;
+  db.query(
+    "DELETE FROM highlights WHERE highlight_id = ? AND reader_id = ?",
+    [highlightId, readerId],
+    (err, result) => {
+      if (err) return res.status(500).json({ success: false, message: "Server error" });
+      if (result.affectedRows === 0) return res.status(404).json({ success: false, message: "Highlight not found" });
+      res.json({ success: true });
+    }
+  );
+});
+
 // Notes
 router.get("/notes/:bookId", authReader, (req, res) => {
   const readerId = req.user.reader_id;

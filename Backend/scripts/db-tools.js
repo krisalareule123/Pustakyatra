@@ -393,6 +393,32 @@ async function createReadingNotes() {
   console.log("✅ reading_notes table ready");
 }
 
+// ── create-highlights ─────────────────────────────────────────────────────────
+async function createHighlights() {
+  await new Promise((resolve, reject) => {
+    db.query(`
+      CREATE TABLE IF NOT EXISTS highlights (
+        highlight_id  INT AUTO_INCREMENT PRIMARY KEY,
+        reader_id     INT NOT NULL,
+        book_id       INT NOT NULL,
+        page_number   INT NOT NULL,
+        selected_text TEXT NOT NULL,
+        created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (reader_id) REFERENCES readers(reader_id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `, (err) => err ? reject(err) : resolve());
+  });
+  console.log("✅ highlights table ready");
+}
+
+// ── add-highlight-rects ───────────────────────────────────────────────────────
+async function addHighlightRects() {
+  await q("ALTER TABLE highlights ADD COLUMN IF NOT EXISTS rects JSON NULL");
+  console.log("✅ highlights.rects ready");
+  await q("ALTER TABLE highlights ADD COLUMN IF NOT EXISTS color VARCHAR(20) NOT NULL DEFAULT 'yellow'");
+  console.log("✅ highlights.color ready");
+}
+
 const commands = { inspect, describe, migrate, "clean-books": cleanBooks,
                    "fix-book-status": fixBookStatus, "fix-passwords": fixPasswords,
                    "cleanup-draft-orders": cleanupDraftOrders,
@@ -405,7 +431,9 @@ const commands = { inspect, describe, migrate, "clean-books": cleanBooks,
                    "add-soft-delete": addSoftDelete,
                    "create-reading-progress": createReadingProgress,
                    "create-bookmarks": createBookmarks,
-                   "create-reading-notes": createReadingNotes };
+                   "create-reading-notes": createReadingNotes,
+                   "create-highlights": createHighlights,
+                   "add-highlight-rects": addHighlightRects };
 
 if (!cmd || !commands[cmd]) {
   console.log("Usage: node Backend/scripts/db-tools.js <command>\n");

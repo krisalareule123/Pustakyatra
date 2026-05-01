@@ -335,12 +335,15 @@
   width: 100%;
   padding: 16px 0 32px;
   gap: 16px;
+  /* Stable layout — no overflow changes that cause topbar shift */
 }
 
 .reader-pdf-page {
   display: flex;
   justify-content: center;
   width: 100%;
+  min-height: 600px; /* prevents layout collapse during page transition */
+  position: relative; /* required for highlight overlay positioning */
 }
 
 .reader-pdf-page canvas {
@@ -498,4 +501,103 @@
   line-height: 1.5;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+/* ── Highlights panel ────────────────────────────────────────────── */
+.reader-highlights-panel {
+  width: 100%;
+  max-width: 600px;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 10px;
+  padding: 14px 18px;
+}
+
+.reader-highlights-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.reader-highlight-item {
+  background: rgba(217, 119, 6, 0.1);
+  border: 1px solid rgba(217, 119, 6, 0.3);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.reader-highlight-page {
+  background: rgba(217, 119, 6, 0.25);
+  border: 1px solid rgba(217, 119, 6, 0.4);
+  border-radius: 5px;
+  color: #fcd34d;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 10px;
+  cursor: pointer;
+}
+
+.reader-highlight-page:hover {
+  background: rgba(217, 119, 6, 0.45);
+}
+
+.reader-highlight-text {
+  color: #fde68a;
+  font-size: 13px;
+  margin: 6px 0 0;
+  line-height: 1.5;
+  font-style: italic;
+  word-break: break-word;
+}
+
+/* ── Toast notification ──────────────────────────────────────────── */
+.reader-toast {
+  position: fixed;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 10px 24px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  z-index: 9999;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  pointer-events: none;
+  animation: readerToastIn 0.2s ease;
+}
+
+.reader-toast-success {
+  background: #065f46;
+  color: #fff;
+  border: 1px solid #34d399;
+}
+
+.reader-toast-warn {
+  background: #92400e;
+  color: #fff;
+  border: 1px solid #f59e0b;
+}
+
+@keyframes readerToastIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(10px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* ── Text layer highlight support ───────────────────────────────── */
+.react-pdf__Page__textContent {
+  /* Must be visible for highlight matching to work */
+  opacity: 1 !important;
+  color: transparent;
+  user-select: text;
+}
+
+.react-pdf__Page__textContent span {
+  cursor: text;
+  transition: background-color 0.15s;
+}
+
+.react-pdf__Page__textContent span[data-highlighted] {
+  background-color: rgba(253, 224, 71, 0.55) !important;
+  border-radius: 2px;
 }

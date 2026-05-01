@@ -50,6 +50,19 @@ export default function Reader() {
   const [savingNote, setSavingNote] = useState(false);
   const [noteMsg, setNoteMsg]       = useState("");
 
+  // Highlights state
+  const [highlights, setHighlights]         = useState([]);
+  const [showHighlights, setShowHighlights] = useState(false);
+  const [highlightMsg, setHighlightMsg]     = useState("");
+  const [highlightBtnActive, setHighlightBtnActive] = useState(false); // true when text is selected
+
+  // Toast notification
+  const [toast, setToast] = useState(null); // { msg, type: "success"|"warn" }
+  const showToast = (msg, type = "success") => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 2500);
+  };
+
   const token = localStorage.getItem("token") || localStorage.getItem("authToken");
 
   // Measure container width for responsive PDF rendering
@@ -63,6 +76,16 @@ export default function Reader() {
     window.addEventListener("resize", measure);
     return () => window.removeEventListener("resize", measure);
   }, [status]);
+
+  // Track text selection to enable/disable highlight button
+  useEffect(() => {
+    const onMouseUp = () => {
+      const sel = window.getSelection().toString().trim();
+      setHighlightBtnActive(sel.length > 0);
+    };
+    document.addEventListener("mouseup", onMouseUp);
+    return () => document.removeEventListener("mouseup", onMouseUp);
+  }, []);
 
   // Save progress to backend
   const saveProgress = useCallback((bId, page) => {
@@ -119,8 +142,7 @@ export default function Reader() {
       if (res.success) {
         setNotes(prev => [{ note_id: res.note_id, page_number: pageNumber, note_text: noteText.trim(), created_at: new Date().toISOString() }, ...prev]);
         setNoteText("");
-        setNoteMsg("Note saved!");
-        setTimeout(() => setNoteMsg(""), 2000);
+        showToast("Note saved!");
       }
     } catch { /* non-critical */ }
     setSavingNote(false);
@@ -137,6 +159,107 @@ export default function Reader() {
     } catch { /* non-critical */ }
   };
 
+  // Load highlights
+  const loadHighlights = useCallback(async (bId) => {
+    try {
+      const res = await fetch(`${API_BASE}/readers/highlights/${bId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      }).then(r => r.json());
+      if (res.success) setHighlights(res.highlights || []);
+    } catch { /* non-critical */ }
+  }, [token]);
+
+  // Save highlight using selection coordinates (works for Nepali text)
+  const saveHighlight = async () => {
+    const sel = window.getSelection();
+    const text = sel?.toString()
+      .trim()
+      .replace(/[\u200B-\u200D\uFEFF]/g, "") // remove zero-width chars
+      .replace(/\s+/g, " ");                  // collapse whitespace
+    if (!text) {
+      showToast("Select some text from the PDF first.", "warn");
+      return;
+    }
+    if (!bookId) return;
+
+    // Duplicate check — same text on same page already highlighted
+    const isDuplicate = highlights.some(
+      h => h.page_number === pageNumber && h.selected_text.trim() === text
+    );
+    if (isDuplicate) {
+      showToast("Already highlighted on this page.", "warn");
+      window.getSelection().removeAllRanges();
+      setHighlightBtnActive(false);
+      return;
+    }
+
+    // Get the PDF page container to compute relative rects
+    const pageContainer = document.querySelector(".reader-pdf-page");
+    if (!pageContainer) {
+      showToast("PDF page not ready. Try again.", "warn");
+      return;
+    }
+    const containerRect = pageContainer.getBoundingClientRect();
+
+    // Collect all client rects from the selection range
+    const range = sel.getRangeAt(0);
+    const clientRects = Array.from(range.getClientRects());
+
+    // Convert to relative coordinates (percentage of container size for scale-independence)
+    const rects = clientRects
+      .filter(r => r.width > 0 && r.height > 0)
+      .map(r => ({
+        x: ((r.left - containerRect.left) / containerRect.width) * 100,
+        y: ((r.top - containerRect.top) / containerRect.height) * 100,
+        w: (r.width / containerRect.width) * 100,
+        h: (r.height / containerRect.height) * 100,
+      }));
+
+    if (rects.length === 0) {
+      showToast("Could not capture selection position.", "warn");
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/readers/highlights`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          book_id: bookId,
+          page_number: pageNumber,
+          selected_text: text,
+          rects,
+          color: "yellow"
+        })
+      }).then(r => r.json());
+
+      if (res.success) {
+        setHighlights(prev => [{
+          highlight_id: res.highlight_id,
+          page_number: pageNumber,
+          selected_text: text,
+          rects,
+          color: "yellow",
+          created_at: new Date().toISOString()
+        }, ...prev]);
+        sel.removeAllRanges();
+        setHighlightBtnActive(false);
+        showToast("Text highlighted and saved!");
+      }
+    } catch { /* non-critical */ }
+  };
+
+  // Delete highlight
+  const deleteHighlight = async (highlightId) => {
+    try {
+      await fetch(`${API_BASE}/readers/highlights/${highlightId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setHighlights(prev => prev.filter(h => h.highlight_id !== highlightId));
+    } catch { /* non-critical */ }
+  };
+
   // Toggle bookmark for current page
   const toggleBookmark = async () => {
     if (!bookId) return;
@@ -148,7 +271,7 @@ export default function Reader() {
         body: JSON.stringify({ book_id: bookId, page_number: pageNumber })
       }).catch(() => {});
       setBookmarks(prev => prev.filter(b => b.page_number !== pageNumber));
-      setBookmarkMsg("Bookmark removed");
+      showToast("Bookmark removed");
     } else {
       await fetch(`${API_BASE}/readers/bookmarks`, {
         method: "POST",
@@ -156,7 +279,7 @@ export default function Reader() {
         body: JSON.stringify({ book_id: bookId, page_number: pageNumber })
       }).catch(() => {});
       setBookmarks(prev => [...prev, { page_number: pageNumber }].sort((a, b) => a.page_number - b.page_number));
-      setBookmarkMsg("Page bookmarked!");
+      showToast("Page bookmarked!");
     }
     setTimeout(() => setBookmarkMsg(""), 2000);
   };
@@ -200,6 +323,9 @@ export default function Reader() {
 
             // Load notes
             await loadNotes(res.bookId);
+
+            // Load highlights
+            await loadHighlights(res.bookId);
           } catch (e) {
             console.error("PDF load error:", e);
           } finally {
@@ -231,6 +357,7 @@ export default function Reader() {
     if (!numPages || newPage < 1 || newPage > numPages) return;
     setPageNumber(newPage);
     saveProgress(bookId, newPage);
+    // No scrollIntoView — it causes layout shift. The page area stays fixed.
   };
 
   const handleDownload = async () => {
@@ -342,6 +469,31 @@ export default function Reader() {
               📝 Notes {notes.length > 0 ? `(${notes.length})` : ""}
             </button>
           )}
+          {pdfBlobUrl && (
+            <button
+              className="reader-download-btn"
+              onClick={saveHighlight}
+              style={{
+                background: highlightBtnActive ? "#d97706" : "rgba(255,255,255,0.08)",
+                opacity: highlightBtnActive ? 1 : 0.55,
+                cursor: highlightBtnActive ? "pointer" : "default",
+                border: highlightBtnActive ? "1px solid #f59e0b" : "1px solid transparent",
+                transition: "all 0.2s"
+              }}
+              title={highlightBtnActive ? "Save highlight" : "Select text from the PDF first"}
+            >
+              ✏️ Highlight{highlightBtnActive ? " Selected" : ""}
+            </button>
+          )}
+          {pdfBlobUrl && (
+            <button
+              className="reader-download-btn"
+              onClick={() => setShowHighlights(s => !s)}
+              style={{ background: showHighlights ? "#d97706" : "rgba(255,255,255,0.1)" }}
+            >
+              🌟 Highlights {highlights.length > 0 ? `(${highlights.length})` : ""}
+            </button>
+          )}
         </div>
       </header>
 
@@ -446,6 +598,46 @@ export default function Reader() {
               </div>
             )}
 
+            {/* Highlights panel */}
+            {showHighlights && (
+              <div className="reader-highlights-panel">
+                <div className="reader-bookmark-header">
+                  <span>🌟 Highlights</span>
+                  <button onClick={() => setShowHighlights(false)} style={{ background: "none", border: "none", color: "#aaa", cursor: "pointer", fontSize: 16 }}>✕</button>
+                </div>
+                <p style={{ color: "#94a3b8", fontSize: 12, margin: "0 0 10px" }}>
+                  Select text from the PDF, then click <strong style={{ color: "#fbbf24" }}>✏️ Highlight Selected</strong> in the toolbar.
+                </p>
+                {highlights.length === 0 ? (
+                  <p style={{ color: "#888", fontSize: 13 }}>No highlights yet.</p>
+                ) : (
+                  <div className="reader-highlights-list">
+                    {highlights.map(h => (
+                      <div key={h.highlight_id} className="reader-highlight-item">
+                        <div className="reader-note-header">
+                          <button
+                            className="reader-highlight-page"
+                            onClick={() => { goToPage(h.page_number); setShowHighlights(false); }}
+                          >
+                            📄 Page {h.page_number}
+                          </button>
+                          <button
+                            onClick={() => deleteHighlight(h.highlight_id)}
+                            style={{ background: "none", border: "none", color: "#f87171", cursor: "pointer", fontSize: 13, fontWeight: 700 }}
+                          >
+                            ✕
+                          </button>
+                        </div>
+                        <p className="reader-highlight-text">
+                          "{(() => { const t = h.selected_text.trim().replace(/\s+/g, " "); return t.length > 60 ? t.slice(0, 60) + "..." : t; })()}"
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Page navigation — top */}
             <div className="reader-page-controls">
               <button
@@ -486,10 +678,33 @@ export default function Reader() {
 
             {/* PDF page rendered by react-pdf */}
             <div className="reader-pdf-page">
+              {/* Coordinate-based highlight overlays — works for Nepali text */}
+              {highlights
+                .filter(h => h.page_number === pageNumber && h.rects && h.rects.length > 0)
+                .map(h =>
+                  h.rects.map((r, ri) => (
+                    <div
+                      key={`${h.highlight_id}-${ri}`}
+                      style={{
+                        position: "absolute",
+                        left: `${r.x}%`,
+                        top: `${r.y}%`,
+                        width: `${r.w}%`,
+                        height: `${r.h}%`,
+                        background: "rgba(253, 224, 71, 0.45)",
+                        pointerEvents: "none",
+                        borderRadius: 2,
+                        zIndex: 10,
+                        mixBlendMode: "multiply",
+                      }}
+                    />
+                  ))
+                )
+              }
               <Document
                 file={pdfBlobUrl}
                 onLoadSuccess={onDocumentLoadSuccess}
-                loading={<div className="reader-pdf-loading"><div className="reader-gate-spinner" /><p>Rendering...</p></div>}
+                loading={null}
                 error={<div style={{ color: "#ef4444", padding: 24 }}>Failed to load PDF.</div>}
               >
                 <Page
@@ -497,6 +712,7 @@ export default function Reader() {
                   width={pageWidth}
                   renderTextLayer={true}
                   renderAnnotationLayer={true}
+                  loading={<div style={{ width: pageWidth, minHeight: 600, background: "rgba(255,255,255,0.03)", borderRadius: 4 }} />}
                 />
               </Document>
             </div>
@@ -534,6 +750,13 @@ export default function Reader() {
           />
         )}
       </main>
+
+      {/* Toast notification */}
+      {toast && (
+        <div className={`reader-toast reader-toast-${toast.type}`}>
+          {toast.type === "warn" ? "⚠️" : "✓"} {toast.msg}
+        </div>
+      )}
 
     </div>
   );
