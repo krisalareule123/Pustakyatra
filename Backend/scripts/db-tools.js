@@ -338,6 +338,24 @@ async function addSoftDelete() {
   console.log("✅ books.deleted_at column ready");
 }
 
+// ── create-reading-progress ───────────────────────────────────────────────────
+async function createReadingProgress() {
+  await new Promise((resolve, reject) => {
+    db.query(`
+      CREATE TABLE IF NOT EXISTS reading_progress (
+        progress_id INT PRIMARY KEY AUTO_INCREMENT,
+        reader_id   INT NOT NULL,
+        book_id     INT NOT NULL,
+        page_number INT NOT NULL DEFAULT 1,
+        updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_reader_book (reader_id, book_id),
+        FOREIGN KEY (reader_id) REFERENCES readers(reader_id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `, (err) => err ? reject(err) : resolve());
+  });
+  console.log("✅ reading_progress table ready");
+}
+
 const commands = { inspect, describe, migrate, "clean-books": cleanBooks,
                    "fix-book-status": fixBookStatus, "fix-passwords": fixPasswords,
                    "cleanup-draft-orders": cleanupDraftOrders,
@@ -347,7 +365,8 @@ const commands = { inspect, describe, migrate, "clean-books": cleanBooks,
                    "add-reader-status": addReaderStatus,
                    "reset-user-status": resetUserStatus,
                    "create-promo-tables": createPromoTables,
-                   "add-soft-delete": addSoftDelete };
+                   "add-soft-delete": addSoftDelete,
+                   "create-reading-progress": createReadingProgress };
 
 if (!cmd || !commands[cmd]) {
   console.log("Usage: node Backend/scripts/db-tools.js <command>\n");

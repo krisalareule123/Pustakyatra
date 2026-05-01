@@ -61,6 +61,36 @@ router.get("/notifications", authReader, getReaderNotifications);
 // Promo code validation
 router.post("/promo/validate", authReader, validatePromoCode);
 
+// Reading progress
+router.get("/reading-progress/:bookId", authReader, (req, res) => {
+  const readerId = req.user.reader_id;
+  const { bookId } = req.params;
+  db.query(
+    "SELECT page_number FROM reading_progress WHERE reader_id = ? AND book_id = ?",
+    [readerId, bookId],
+    (err, rows) => {
+      if (err) return res.status(500).json({ success: false, message: "Server error" });
+      res.json({ success: true, page: rows.length > 0 ? rows[0].page_number : 1 });
+    }
+  );
+});
+
+router.post("/reading-progress", authReader, (req, res) => {
+  const readerId = req.user.reader_id;
+  const { bookId, page } = req.body;
+  if (!bookId || !page) return res.status(400).json({ success: false, message: "bookId and page required" });
+  db.query(
+    `INSERT INTO reading_progress (reader_id, book_id, page_number)
+     VALUES (?, ?, ?)
+     ON DUPLICATE KEY UPDATE page_number = VALUES(page_number)`,
+    [readerId, bookId, page],
+    (err) => {
+      if (err) return res.status(500).json({ success: false, message: "Server error" });
+      res.json({ success: true });
+    }
+  );
+});
+
 // GET /api/readers/ping — updates last_seen (heartbeat)
 router.get("/ping", authReader, (req, res) => {
   res.json({ success: true });

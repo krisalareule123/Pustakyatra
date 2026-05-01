@@ -326,3 +326,72 @@
   .reader-topbar { padding: 0 12px; }
   .reader-book-author { display: none; }
 }
+
+/* ── PDF page-by-page reader ─────────────────────────────────────── */
+.reader-pdf-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  padding: 16px 0 32px;
+  gap: 16px;
+}
+
+.reader-pdf-page {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.reader-pdf-page canvas {
+  max-width: 100%;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.35);
+  border-radius: 4px;
+}
+
+.reader-page-controls {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 10px 24px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+.reader-page-controls-bottom {
+  margin-top: 8px;
+}
+
+.reader-page-btn {
+  padding: 8px 22px;
+  border-radius: 7px;
+  border: none;
+  background: #4f46e5;
+  color: #fff;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+}
+
+.reader-page-btn:disabled {
+  background: #333;
+  opacity: 0.5;
+  cursor: default;
+}
+
+.reader-page-btn:not(:disabled):hover {
+  background: #4338ca;
+}
+
+.reader-page-info {
+  color: #ccc;
+  font-size: 14px;
+  min-width: 120px;
+  text-align: center;
+}
+
+.reader-page-info strong {
+  color: #fff;
+}

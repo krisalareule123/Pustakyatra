@@ -1,7 +1,16 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
+import { Document, Page, pdfjs } from "react-pdf";
 import { orderAPI } from "../services/api";
+import "react-pdf/dist/Page/AnnotationLayer.css";
+import "react-pdf/dist/Page/TextLayer.css";
 import "./Reader.css";
+
+// Use the bundled worker from react-pdf v9
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+  "pdfjs-dist/build/pdf.worker.min.mjs",
+  import.meta.url
+).toString();
 
 const API_BASE = "http://localhost:5001/api";
 
@@ -14,13 +23,58 @@ const initials = (title) =>
 export default function Reader() {
   const { readToken } = useParams();
   const navigate = useNavigate();
-  const [status, setStatus] = useState("checking");
-  const [access, setAccess] = useState(null);
-  const [book, setBook] = useState(null);
+
+  const [status, setStatus]         = useState("checking");
+  const [access, setAccess]         = useState(null);
+  const [book, setBook]             = useState(null);
   const [pdfBlobUrl, setPdfBlobUrl] = useState(null);
   const [pdfLoading, setPdfLoading] = useState(false);
-  const [message, setMessage] = useState("");
+  const [message, setMessage]       = useState("");
 
+  // PDF page state
+  const [numPages, setNumPages]       = useState(null);
+  const [pageNumber, setPageNumber]   = useState(1);
+  const [bookId, setBookId]           = useState(null);
+  const [pageWidth, setPageWidth]     = useState(800);
+  const containerRef                  = useRef(null);
+
+  const token = localStorage.getItem("token") || localStorage.getItem("authToken");
+
+  // Measure container width for responsive PDF rendering
+  useEffect(() => {
+    const measure = () => {
+      if (containerRef.current) {
+        setPageWidth(Math.min(containerRef.current.clientWidth - 32, 900));
+      }
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, [status]);
+
+  // Save progress to backend
+  const saveProgress = useCallback((bId, page) => {
+    if (!bId || !page || !token) return;
+    fetch(`${API_BASE}/readers/reading-progress`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ bookId: bId, page })
+    }).catch(() => {});
+  }, [token]);
+
+  // Load saved progress from backend
+  const loadProgress = useCallback(async (bId) => {
+    try {
+      const res = await fetch(`${API_BASE}/readers/reading-progress/${bId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      }).then(r => r.json());
+      return res.success ? (res.page || 1) : 1;
+    } catch {
+      return 1;
+    }
+  }, [token]);
+
+  // Resolve token and load PDF
   useEffect(() => {
     if (!readToken || !readToken.startsWith("read_")) {
       setMessage("Invalid or missing read token.");
@@ -38,11 +92,10 @@ export default function Reader() {
 
         setAccess(res);
         setBook({ title: res.bookTitle, author: res.authorName || null });
+        setBookId(res.bookId);
 
-        // If backend has a real PDF, fetch it as a blob (so auth header is sent)
         if (res.pdfReadUrl) {
           setPdfLoading(true);
-          const token = localStorage.getItem("token") || localStorage.getItem("authToken");
           try {
             const pdfRes = await fetch(res.pdfReadUrl, {
               headers: { Authorization: `Bearer ${token}` }
@@ -50,9 +103,12 @@ export default function Reader() {
             if (!pdfRes.ok) throw new Error("PDF fetch failed");
             const blob = await pdfRes.blob();
             setPdfBlobUrl(URL.createObjectURL(blob));
+
+            // Load saved progress
+            const savedPage = await loadProgress(res.bookId);
+            setPageNumber(savedPage);
           } catch (e) {
             console.error("PDF load error:", e);
-            // Don't block — just show placeholder
           } finally {
             setPdfLoading(false);
           }
@@ -71,13 +127,21 @@ export default function Reader() {
         }
       });
 
-    // Cleanup blob URL on unmount
     return () => { if (pdfBlobUrl) URL.revokeObjectURL(pdfBlobUrl); };
   }, [readToken]);
 
+  const onDocumentLoadSuccess = ({ numPages }) => {
+    setNumPages(numPages);
+  };
+
+  const goToPage = (newPage) => {
+    if (!numPages || newPage < 1 || newPage > numPages) return;
+    setPageNumber(newPage);
+    saveProgress(bookId, newPage);
+  };
+
   const handleDownload = async () => {
     if (!access?.pdfDownloadUrl) return;
-    const token = localStorage.getItem("token") || localStorage.getItem("authToken");
     try {
       const res = await fetch(access.pdfDownloadUrl, {
         headers: { Authorization: `Bearer ${token}` }
@@ -87,15 +151,15 @@ export default function Reader() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${(book?.title || access?.bookTitle || "book").replace(/\s+/g, "_")}.pdf`;
+      a.download = `${(book?.title || "book").replace(/\s+/g, "_")}.pdf`;
       a.click();
       URL.revokeObjectURL(url);
-    } catch (e) {
+    } catch {
       alert("Download failed. Please try again.");
     }
   };
 
-  // ── Checking ─────────────────────────────────────────────────────
+  // ── Checking ──────────────────────────────────────────────────────
   if (status === "checking") {
     return (
       <div className="reader-gate">
@@ -105,7 +169,7 @@ export default function Reader() {
     );
   }
 
-  // ── Denied ───────────────────────────────────────────────────────
+  // ── Denied ────────────────────────────────────────────────────────
   if (status === "denied") {
     return (
       <div className="reader-gate">
@@ -171,18 +235,79 @@ export default function Reader() {
       </header>
 
       {/* Reader body */}
-      <main className="reader-body">
+      <main className="reader-body" ref={containerRef}>
         {pdfLoading ? (
           <div className="reader-pdf-loading">
             <div className="reader-gate-spinner" />
             <p>Loading PDF...</p>
           </div>
         ) : pdfBlobUrl ? (
-          <iframe
-            className="reader-iframe"
-            src={`${pdfBlobUrl}#toolbar=1&navpanes=0&scrollbar=1&view=FitH`}
-            title={bookTitle}
-          />
+          <div className="reader-pdf-container">
+            {/* Page navigation — top */}
+            <div className="reader-page-controls">
+              <button
+                className="reader-page-btn"
+                onClick={() => goToPage(pageNumber - 1)}
+                disabled={pageNumber <= 1}
+              >
+                ← Prev
+              </button>
+
+              <span className="reader-page-info">
+                Page <strong>{pageNumber}</strong>
+                {numPages ? <> of <strong>{numPages}</strong></> : null}
+              </span>
+
+              <button
+                className="reader-page-btn"
+                onClick={() => goToPage(pageNumber + 1)}
+                disabled={numPages !== null && pageNumber >= numPages}
+              >
+                Next →
+              </button>
+            </div>
+
+            {/* PDF page rendered by react-pdf */}
+            <div className="reader-pdf-page">
+              <Document
+                file={pdfBlobUrl}
+                onLoadSuccess={onDocumentLoadSuccess}
+                loading={<div className="reader-pdf-loading"><div className="reader-gate-spinner" /><p>Rendering...</p></div>}
+                error={<div style={{ color: "#ef4444", padding: 24 }}>Failed to load PDF.</div>}
+              >
+                <Page
+                  pageNumber={pageNumber}
+                  width={pageWidth}
+                  renderTextLayer={true}
+                  renderAnnotationLayer={true}
+                />
+              </Document>
+            </div>
+
+            {/* Page navigation — bottom */}
+            <div className="reader-page-controls reader-page-controls-bottom">
+              <button
+                className="reader-page-btn"
+                onClick={() => goToPage(pageNumber - 1)}
+                disabled={pageNumber <= 1}
+              >
+                ← Prev
+              </button>
+
+              <span className="reader-page-info">
+                Page <strong>{pageNumber}</strong>
+                {numPages ? <> of <strong>{numPages}</strong></> : null}
+              </span>
+
+              <button
+                className="reader-page-btn"
+                onClick={() => goToPage(pageNumber + 1)}
+                disabled={numPages !== null && pageNumber >= numPages}
+              >
+                Next →
+              </button>
+            </div>
+          </div>
         ) : (
           <NoPdfPlaceholder
             bookTitle={bookTitle}
