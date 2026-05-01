@@ -38,6 +38,11 @@ export default function Reader() {
   const [pageWidth, setPageWidth]     = useState(800);
   const containerRef                  = useRef(null);
 
+  // Bookmark state
+  const [bookmarks, setBookmarks]         = useState([]); // [{ page_number }]
+  const [bookmarkMsg, setBookmarkMsg]     = useState("");
+  const [showBookmarks, setShowBookmarks] = useState(false);
+
   const token = localStorage.getItem("token") || localStorage.getItem("authToken");
 
   // Measure container width for responsive PDF rendering
@@ -74,6 +79,40 @@ export default function Reader() {
     }
   }, [token]);
 
+  // Load bookmarks
+  const loadBookmarks = useCallback(async (bId) => {
+    try {
+      const res = await fetch(`${API_BASE}/readers/bookmarks/${bId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      }).then(r => r.json());
+      if (res.success) setBookmarks(res.bookmarks || []);
+    } catch { /* non-critical */ }
+  }, [token]);
+
+  // Toggle bookmark for current page
+  const toggleBookmark = async () => {
+    if (!bookId) return;
+    const isBookmarked = bookmarks.some(b => b.page_number === pageNumber);
+    if (isBookmarked) {
+      await fetch(`${API_BASE}/readers/bookmarks`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ book_id: bookId, page_number: pageNumber })
+      }).catch(() => {});
+      setBookmarks(prev => prev.filter(b => b.page_number !== pageNumber));
+      setBookmarkMsg("Bookmark removed");
+    } else {
+      await fetch(`${API_BASE}/readers/bookmarks`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ book_id: bookId, page_number: pageNumber })
+      }).catch(() => {});
+      setBookmarks(prev => [...prev, { page_number: pageNumber }].sort((a, b) => a.page_number - b.page_number));
+      setBookmarkMsg("Page bookmarked!");
+    }
+    setTimeout(() => setBookmarkMsg(""), 2000);
+  };
+
   // Resolve token and load PDF
   useEffect(() => {
     if (!readToken || !readToken.startsWith("read_")) {
@@ -107,6 +146,9 @@ export default function Reader() {
             // Load saved progress
             const savedPage = await loadProgress(res.bookId);
             setPageNumber(savedPage);
+
+            // Load bookmarks
+            await loadBookmarks(res.bookId);
           } catch (e) {
             console.error("PDF load error:", e);
           } finally {
@@ -231,6 +273,15 @@ export default function Reader() {
               ↓ Download
             </button>
           )}
+          {pdfBlobUrl && (
+            <button
+              className="reader-download-btn"
+              onClick={() => setShowBookmarks(s => !s)}
+              style={{ background: showBookmarks ? "#4f46e5" : "rgba(255,255,255,0.1)" }}
+            >
+              🔖 Bookmarks {bookmarks.length > 0 ? `(${bookmarks.length})` : ""}
+            </button>
+          )}
         </div>
       </header>
 
@@ -243,6 +294,31 @@ export default function Reader() {
           </div>
         ) : pdfBlobUrl ? (
           <div className="reader-pdf-container">
+            {/* Bookmark panel */}
+            {showBookmarks && (
+              <div className="reader-bookmark-panel">
+                <div className="reader-bookmark-header">
+                  <span>🔖 Bookmarks</span>
+                  <button onClick={() => setShowBookmarks(false)} style={{ background: "none", border: "none", color: "#aaa", cursor: "pointer", fontSize: 16 }}>✕</button>
+                </div>
+                {bookmarks.length === 0 ? (
+                  <p style={{ color: "#888", fontSize: 13, padding: "8px 0" }}>No bookmarks yet. Click "Bookmark" while reading to save a page.</p>
+                ) : (
+                  <div className="reader-bookmark-list">
+                    {bookmarks.map(b => (
+                      <button
+                        key={b.page_number}
+                        className="reader-bookmark-item"
+                        onClick={() => { goToPage(b.page_number); setShowBookmarks(false); }}
+                      >
+                        📄 Page {b.page_number}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Page navigation — top */}
             <div className="reader-page-controls">
               <button
@@ -265,6 +341,20 @@ export default function Reader() {
               >
                 Next →
               </button>
+
+              {/* Bookmark button */}
+              <button
+                className="reader-page-btn"
+                onClick={toggleBookmark}
+                style={{
+                  background: bookmarks.some(b => b.page_number === pageNumber) ? "#f59e0b" : "rgba(255,255,255,0.1)",
+                  marginLeft: 8
+                }}
+              >
+                {bookmarks.some(b => b.page_number === pageNumber) ? "🔖 Bookmarked" : "🔖 Bookmark"}
+              </button>
+
+              {bookmarkMsg && <span style={{ color: "#86efac", fontSize: 13 }}>{bookmarkMsg}</span>}
             </div>
 
             {/* PDF page rendered by react-pdf */}

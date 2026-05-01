@@ -395,3 +395,46 @@
 .reader-page-info strong {
   color: #fff;
 }
+
+/* ── Bookmark panel ──────────────────────────────────────────────── */
+.reader-bookmark-panel {
+  width: 100%;
+  max-width: 600px;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 10px;
+  padding: 14px 18px;
+}
+
+.reader-bookmark-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 700;
+  color: #e2e8f0;
+  font-size: 14px;
+  margin-bottom: 10px;
+}
+
+.reader-bookmark-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.reader-bookmark-item {
+  padding: 6px 14px;
+  background: rgba(79, 70, 229, 0.3);
+  border: 1px solid rgba(79, 70, 229, 0.5);
+  border-radius: 6px;
+  color: #c7d2fe;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.reader-bookmark-item:hover {
+  background: rgba(79, 70, 229, 0.6);
+  color: #fff;
+}

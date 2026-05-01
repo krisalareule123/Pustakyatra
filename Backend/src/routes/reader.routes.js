@@ -61,7 +61,46 @@ router.get("/notifications", authReader, getReaderNotifications);
 // Promo code validation
 router.post("/promo/validate", authReader, validatePromoCode);
 
-// Reading progress
+// Bookmarks
+router.get("/bookmarks/:bookId", authReader, (req, res) => {
+  const readerId = req.user.reader_id;
+  const { bookId } = req.params;
+  db.query(
+    "SELECT page_number FROM bookmarks WHERE reader_id = ? AND book_id = ? ORDER BY page_number ASC",
+    [readerId, bookId],
+    (err, rows) => {
+      if (err) return res.status(500).json({ success: false, message: "Server error" });
+      res.json({ success: true, bookmarks: rows });
+    }
+  );
+});
+
+router.post("/bookmarks", authReader, (req, res) => {
+  const readerId = req.user.reader_id;
+  const { book_id, page_number } = req.body;
+  if (!book_id || !page_number) return res.status(400).json({ success: false, message: "book_id and page_number required" });
+  db.query(
+    `INSERT IGNORE INTO bookmarks (reader_id, book_id, page_number) VALUES (?, ?, ?)`,
+    [readerId, book_id, page_number],
+    (err) => {
+      if (err) return res.status(500).json({ success: false, message: "Server error" });
+      res.json({ success: true, message: "Bookmarked" });
+    }
+  );
+});
+
+router.delete("/bookmarks", authReader, (req, res) => {
+  const readerId = req.user.reader_id;
+  const { book_id, page_number } = req.body;
+  db.query(
+    "DELETE FROM bookmarks WHERE reader_id = ? AND book_id = ? AND page_number = ?",
+    [readerId, book_id, page_number],
+    (err) => {
+      if (err) return res.status(500).json({ success: false, message: "Server error" });
+      res.json({ success: true, message: "Bookmark removed" });
+    }
+  );
+});
 router.get("/reading-progress/:bookId", authReader, (req, res) => {
   const readerId = req.user.reader_id;
   const { bookId } = req.params;
