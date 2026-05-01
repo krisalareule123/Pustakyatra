@@ -4,10 +4,10 @@
   flex-direction: column;
   height: 100vh;
   background: #1a1a1a;
-  overflow: hidden;
+  overflow: hidden; /* shell itself doesn't scroll — body does */
 }
 
-/* Top bar */
+/* Top bar — sticky so it stays visible when scrolling zoomed PDF */
 .reader-topbar {
   display: flex;
   align-items: center;
@@ -17,7 +17,9 @@
   background: #111;
   border-bottom: 1px solid #2a2a2a;
   flex-shrink: 0;
-  z-index: 10;
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
 
 .reader-back {
@@ -91,11 +93,13 @@
 }
 .reader-download-btn:hover { background: rgba(255,255,255,0.18); color: #fff; }
 
-/* Reader body */
+/* Reader body — scrollable area below the sticky topbar */
 .reader-body {
   flex: 1;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: auto;
   display: flex;
+  flex-direction: column;
 }
 
 .reader-pdf-loading {
@@ -333,9 +337,9 @@
   flex-direction: column;
   align-items: center;
   width: 100%;
-  padding: 16px 0 32px;
+  padding: 16px 0 48px;
   gap: 16px;
-  /* Stable layout — no overflow changes that cause topbar shift */
+  /* Let content grow naturally — scrolling handled by .reader-body */
 }
 
 .reader-pdf-page {
@@ -347,9 +351,9 @@
 }
 
 .reader-pdf-page canvas {
-  max-width: 100%;
   box-shadow: 0 4px 24px rgba(0,0,0,0.35);
   border-radius: 4px;
+  /* No max-width — allow canvas to expand freely when zoomed */
 }
 
 .reader-page-controls {

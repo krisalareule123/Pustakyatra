@@ -38,6 +38,13 @@ export default function Reader() {
   const [pageWidth, setPageWidth]     = useState(800);
   const containerRef                  = useRef(null);
 
+  // Zoom / font adjustment state
+  const [scale, setScale] = useState(1.0);
+  const MIN_SCALE = 0.6;
+  const MAX_SCALE = 2.5;
+  const zoomIn  = () => setScale(s => Math.min(MAX_SCALE, Math.round((s + 0.2) * 10) / 10));
+  const zoomOut = () => setScale(s => Math.max(MIN_SCALE, Math.round((s - 0.2) * 10) / 10));
+
   // Bookmark state
   const [bookmarks, setBookmarks]         = useState([]); // [{ page_number }]
   const [bookmarkMsg, setBookmarkMsg]     = useState("");
@@ -674,6 +681,31 @@ export default function Reader() {
               </button>
 
               {bookmarkMsg && <span style={{ color: "#86efac", fontSize: 13 }}>{bookmarkMsg}</span>}
+
+              {/* Zoom controls */}
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginLeft: "auto" }}>
+                <button
+                  className="reader-page-btn"
+                  onClick={zoomOut}
+                  disabled={scale <= MIN_SCALE}
+                  style={{ padding: "6px 12px", fontSize: 16 }}
+                  title="Zoom Out"
+                >
+                  ➖
+                </button>
+                <span style={{ color: "#ccc", fontSize: 13, minWidth: 44, textAlign: "center" }}>
+                  {Math.round(scale * 100)}%
+                </span>
+                <button
+                  className="reader-page-btn"
+                  onClick={zoomIn}
+                  disabled={scale >= MAX_SCALE}
+                  style={{ padding: "6px 12px", fontSize: 16 }}
+                  title="Zoom In"
+                >
+                  ➕
+                </button>
+              </div>
             </div>
 
             {/* PDF page rendered by react-pdf */}
@@ -710,6 +742,7 @@ export default function Reader() {
                 <Page
                   pageNumber={pageNumber}
                   width={pageWidth}
+                  scale={scale}
                   renderTextLayer={true}
                   renderAnnotationLayer={true}
                   loading={<div style={{ width: pageWidth, minHeight: 600, background: "rgba(255,255,255,0.03)", borderRadius: 4 }} />}
