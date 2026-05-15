@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import { readerAPI, orderAPI } from "../services/api";
 import "./UserDashboard.css";
 
@@ -31,8 +31,9 @@ const inp = {
 
 export default function UserDashboard() {
   const navigate = useNavigate();
-  const [active, setActive] = useState("dashboard");
-  const [user,   setUser]   = useState({ fullName: "", email: "", phone: "", address: "", isActive: 1, isOnline: false, profileImage: null });
+  const location = useLocation();
+  // Support deep-linking to a specific tab via navigation state
+  const [active, setActive] = useState(location.state?.tab || "dashboard");  const [user,   setUser]   = useState({ fullName: "", email: "", phone: "", address: "", isActive: 1, isOnline: false, profileImage: null });
   const [stats,  setStats]  = useState(null);
   const [profileForm,  setProfileForm]  = useState({ fullName: "", email: "", phone: "", address: "" });
   const [passwordForm, setPasswordForm] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
@@ -53,6 +54,15 @@ export default function UserDashboard() {
   const [openingBook,  setOpeningBook]  = useState(null);
 
   const initials = (name) => name?.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase() || "U";
+
+  // React to navigation state changes — handles notification clicks when already on /dashboard
+  useEffect(() => {
+    if (location.state?.tab) {
+      setActive(location.state.tab);
+      // Clear state so back-navigation doesn't re-trigger
+      window.history.replaceState({}, "");
+    }
+  }, [location.state]);
 
   useEffect(() => {
     const token = localStorage.getItem("token") || localStorage.getItem("authToken");
@@ -158,6 +168,36 @@ export default function UserDashboard() {
     navigate("/login");
   };
 
+  const API_BASE = "http://localhost:5001/api";
+
+  // Mark all notifications as read (called when Notifications tab opens)
+  const markAllNotifsRead = async (token, currentNotifs) => {
+    const unread = currentNotifs.filter(n => !n.is_read);
+    if (unread.length === 0) return;
+    const notifIds = unread.map(n => n.id);
+    // Update local state immediately
+    setNotifs(prev => prev.map(n => ({ ...n, is_read: 1 })));
+    // Persist to backend
+    fetch(`${API_BASE}/readers/notifications/mark-all-read`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ notifIds })
+    }).catch(() => {});
+  };
+
+  // Mark single notification as read
+  const markNotifRead = async (token, notif) => {
+    if (notif.is_read) return;
+    setNotifs(prev => prev.map(n => n.id === notif.id ? { ...n, is_read: 1 } : n));
+    const isPromo = notif.type === "promo_reward";
+    const promoNotifId = isPromo ? notif.id.replace("promo_", "") : null;
+    fetch(`${API_BASE}/readers/notifications/mark-read`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ notifId: notif.id, isPromo, promoNotifId })
+    }).catch(() => {});
+  };
+
   const switchTab = (key) => {
     setActive(key);
     const token = localStorage.getItem("token") || localStorage.getItem("authToken");
@@ -170,10 +210,22 @@ export default function UserDashboard() {
       orderAPI.getLibrary(token)
         .then(res => { if (res.success) setLibrary(res.library); })
         .finally(() => setLibLoaded(true));
-    }    if (key === "notifications" && !notifsLoaded) {
-      readerAPI.getNotifications(token)
-        .then(res => { if (res.success) setNotifs(res.notifications); })
-        .finally(() => setNotifsLoaded(true));
+    }
+    if (key === "notifications") {
+      if (!notifsLoaded) {
+        readerAPI.getNotifications(token)
+          .then(res => {
+            if (res.success) {
+              setNotifs(res.notifications);
+              // Mark all as read after loading
+              markAllNotifsRead(token, res.notifications);
+            }
+          })
+          .finally(() => setNotifsLoaded(true));
+      } else {
+        // Already loaded — just mark all read
+        markAllNotifsRead(token, notifs);
+      }
     }
   };
 
@@ -251,9 +303,9 @@ export default function UserDashboard() {
         {/* Nav */}
         <nav className="rd-nav">
           {NAV.map(item => {
-            // Badge for notifications — count of alerts (expiring/expired rentals)
+            // Badge = count of unread notifications
             const badge = item.key === "notifications" && notifs.length > 0
-              ? notifs.filter(n => n.type === "expired" || n.type === "expiring").length
+              ? notifs.filter(n => !n.is_read).length
               : 0;
             return (
               <button key={item.key}
@@ -1093,20 +1145,45 @@ export default function UserDashboard() {
                 <div style={{ padding: "8px 0" }}>
                   {notifs.map((n, idx) => {
                     const BADGE = {
-                      payment:  { label: "Payment",  bg: "#e6f4ea", color: "#1e6b35" },
-                      rent:     { label: "Rental",   bg: "#e8f0fe", color: "#1a56db" },
-                      expiring: { label: "Expiring", bg: "#fff8e1", color: "#b45309" },
-                      expired:  { label: "Expired",  bg: "#fde8e8", color: "#b91c1c" },
+                      payment:      { label: "Payment",      bg: "#e6f4ea", color: "#1e6b35" },
+                      rent:         { label: "Rental",       bg: "#e8f0fe", color: "#1a56db" },
+                      expiring:     { label: "Expiring",     bg: "#fff8e1", color: "#b45309" },
+                      expired:      { label: "Expired",      bg: "#fde8e8", color: "#b91c1c" },
+                      promo_reward: { label: "Promo Reward", bg: "#ede9fe", color: "#6d28d9" },
                     };
                     const badge = BADGE[n.type] || { label: n.type, bg: "#f0f0f0", color: "#555" };
+
+                    // Derive navigation target from notification type
+                    const getTarget = () => {
+                      switch (n.type) {
+                        case "payment":      return { path: "/dashboard", tab: "orders" };
+                        case "rent":         return { path: "/dashboard", tab: "library" };
+                        case "expiring":     return { path: "/dashboard", tab: "library" };
+                        case "expired":      return { path: "/dashboard", tab: "library" };
+                        case "promo_reward": return { path: "/browse", tab: null };
+                        default:             return null;
+                      }
+                    };
+                    const target = getTarget();
+
                     return (
-                      <div key={n.id} style={{
-                        display: "flex", alignItems: "flex-start", gap: 14,
-                        padding: "14px 22px",
-                        borderBottom: idx < notifs.length - 1 ? "1px solid #f5f5f5" : "none",
-                        background: (n.type === "expired" || n.type === "expiring") ? "#fffdf5" : "white",
-                        transition: "background 0.15s",
-                      }}>
+                      <div key={n.id} onClick={() => {
+                          const tok = localStorage.getItem("token") || localStorage.getItem("authToken");
+                          markNotifRead(tok, n);
+                          if (target) navigate(target.path, target.tab ? { state: { tab: target.tab } } : undefined);
+                        }}
+                        style={{
+                          display: "flex", alignItems: "flex-start", gap: 14,
+                          padding: "14px 22px",
+                          borderBottom: idx < notifs.length - 1 ? "1px solid #f5f5f5" : "none",
+                          background: (n.type === "expired" || n.type === "expiring") ? "#fffdf5" : "white",
+                          transition: "background 0.15s",
+                          cursor: target ? "pointer" : "default",
+                          borderRadius: idx === 0 ? "0 0 0 0" : undefined,
+                        }}
+                        onMouseEnter={e => { if (target) e.currentTarget.style.background = "#f9fafb"; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = (n.type === "expired" || n.type === "expiring") ? "#fffdf5" : "white"; }}
+                      >
                         {/* Icon */}
                         <div style={{ width: 38, height: 38, borderRadius: 10, flexShrink: 0,
                           background: n.bg, color: n.color,
@@ -1131,6 +1208,10 @@ export default function UserDashboard() {
                             }) : ""}
                           </div>
                         </div>
+                        {/* Navigate arrow for clickable notifications */}
+                        {target && (
+                          <div style={{ color: "#ccc", fontSize: 16, flexShrink: 0, marginTop: 10 }}>→</div>
+                        )}
                       </div>
                     );
                   })}

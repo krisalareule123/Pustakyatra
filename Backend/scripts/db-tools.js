@@ -419,6 +419,40 @@ async function addHighlightRects() {
   console.log("✅ highlights.color ready");
 }
 
+// ── create-read-notifications ─────────────────────────────────────────────────
+async function createReadNotifications() {
+  await new Promise((resolve, reject) => {
+    db.query(`
+      CREATE TABLE IF NOT EXISTS read_notifications (
+        id        INT AUTO_INCREMENT PRIMARY KEY,
+        reader_id INT NOT NULL,
+        notif_id  VARCHAR(100) NOT NULL,
+        read_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_reader_notif (reader_id, notif_id),
+        FOREIGN KEY (reader_id) REFERENCES readers(reader_id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `, (err) => err ? reject(err) : resolve());
+  });
+  console.log("✅ read_notifications table ready");
+}
+
+// ── create-read-notifications ─────────────────────────────────────────────────
+async function createReadNotifications() {
+  await new Promise((resolve, reject) => {
+    db.query(`
+      CREATE TABLE IF NOT EXISTS read_notifications (
+        id         INT AUTO_INCREMENT PRIMARY KEY,
+        reader_id  INT NOT NULL,
+        notif_id   VARCHAR(100) NOT NULL,
+        read_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_reader_notif (reader_id, notif_id),
+        FOREIGN KEY (reader_id) REFERENCES readers(reader_id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `, (err) => err ? reject(err) : resolve());
+  });
+  console.log("✅ read_notifications table ready");
+}
+
 const commands = { inspect, describe, migrate, "clean-books": cleanBooks,
                    "fix-book-status": fixBookStatus, "fix-passwords": fixPasswords,
                    "cleanup-draft-orders": cleanupDraftOrders,
@@ -433,7 +467,8 @@ const commands = { inspect, describe, migrate, "clean-books": cleanBooks,
                    "create-bookmarks": createBookmarks,
                    "create-reading-notes": createReadingNotes,
                    "create-highlights": createHighlights,
-                   "add-highlight-rects": addHighlightRects };
+                   "add-highlight-rects": addHighlightRects,
+                   "create-read-notifications": createReadNotifications };
 
 if (!cmd || !commands[cmd]) {
   console.log("Usage: node Backend/scripts/db-tools.js <command>\n");

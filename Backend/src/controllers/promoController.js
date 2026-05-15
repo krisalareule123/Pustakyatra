@@ -378,7 +378,7 @@ const checkReviewReward = async (bookId, readerId) => {
        VALUES (?, 'promo_reward', ?, ?)`,
       [
         readerId,
-        `🎁 Thank you for your review! Use code "${promo.code}" to get ${discountText} on your next purchase. Valid until ${new Date(promo.expiry_date).toLocaleDateString()}.`,
+        `🎁 You received promo code "${promo.code}" for writing a review! Get ${discountText} on your next purchase. Valid until ${new Date(promo.expiry_date).toLocaleDateString()}. Use it at checkout.`,
         promo.promo_code_id
       ]
     );

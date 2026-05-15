@@ -343,11 +343,8 @@
 }
 
 .reader-pdf-page {
-  display: flex;
-  justify-content: center;
-  width: 100%;
-  min-height: 600px; /* prevents layout collapse during page transition */
-  position: relative; /* required for highlight overlay positioning */
+  /* sizing and position set via inline style on the element */
+  min-height: 600px;
 }
 
 .reader-pdf-page canvas {

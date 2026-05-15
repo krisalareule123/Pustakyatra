@@ -13,8 +13,6 @@ import ForgotPassword from "./pages/ForgotPassword.jsx";
 import Payment from "./pages/Payment.jsx";
 import PaymentSuccess from "./pages/PaymentSuccess.jsx";
 import PaymentFailure from "./pages/PaymentFailure.jsx";
-import MyOrders from "./pages/MyOrders.jsx";
-import MyLibrary from "./pages/MyLibrary.jsx";
 import Reader from "./pages/Reader.jsx";
 
 import Browse from "./pages/Browse";
@@ -131,8 +129,9 @@ export default function App() {
               <Route path="/payment" element={<Payment />} />
               <Route path="/payment/success" element={<PaymentSuccess />} />
               <Route path="/payment/failure" element={<PaymentFailure />} />
-              <Route path="/my-orders" element={<MyOrders />} />
-              <Route path="/my-library" element={<MyLibrary />} />
+              {/* Redirect old standalone pages to dashboard tabs */}
+              <Route path="/my-orders" element={<Navigate to="/dashboard" state={{ tab: "orders" }} replace />} />
+              <Route path="/my-library" element={<Navigate to="/dashboard" state={{ tab: "library" }} replace />} />
             </Routes>
             <Footer />
           </>

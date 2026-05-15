@@ -238,6 +238,14 @@ export const orderAPI = {
     });
   },
 
+  createStripeSession: async (token, orderId) => {
+    return apiCall("/orders/stripe/create-session", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ order_id: orderId }),
+    });
+  },
+
   simulatePayment: async (token, orderId) => {
     return apiCall("/orders/simulate-payment", {
       method: "POST",

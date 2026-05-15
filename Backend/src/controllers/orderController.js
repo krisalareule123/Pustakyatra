@@ -1050,6 +1050,77 @@ const simulatePayment = (req, res) => {
   }
 };
 
+// Create a Stripe Checkout Session
+const createStripeSession = async (req, res) => {
+  try {
+    const { order_id } = req.body;
+
+    if (!order_id) {
+      return res.status(400).json({ success: false, message: "order_id is required" });
+    }
+
+    // Fetch order from DB — use DB amount, never trust frontend
+    db.query(
+      "SELECT order_id, total_amount, discounted_total, status FROM orders WHERE order_id = ?",
+      [order_id],
+      async (err, results) => {
+        if (err) {
+          console.error("DB error fetching order for Stripe:", err);
+          return res.status(500).json({ success: false, message: "Database error" });
+        }
+
+        if (!results || results.length === 0) {
+          return res.status(404).json({ success: false, message: "Order not found" });
+        }
+
+        const order = results[0];
+
+        // Use discounted_total if a promo was applied, otherwise use total_amount
+        const amount = order.discounted_total != null
+          ? parseFloat(order.discounted_total)
+          : parseFloat(order.total_amount);
+
+        // Safety check: ensure Stripe key is configured
+        if (!process.env.STRIPE_SECRET_KEY) {
+          return res.status(500).json({
+            success: false,
+            message: "Stripe secret key is not configured"
+          });
+        }
+
+        // Debug log (temporary) — confirm key is loaded
+        console.log("Stripe key loaded:", !!process.env.STRIPE_SECRET_KEY);
+
+        const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+
+        const session = await stripe.checkout.sessions.create({
+          payment_method_types: ["card"],
+          mode: "payment",
+          line_items: [
+            {
+              price_data: {
+                currency: "usd",
+                product_data: {
+                  name: "Book Purchase / Rent",
+                },
+                unit_amount: Math.round(amount * 100), // Stripe uses cents
+              },
+              quantity: 1,
+            },
+          ],
+          success_url: "http://localhost:5173/payment/success",
+          cancel_url: "http://localhost:5173/payment/failure",
+        });
+
+        res.status(200).json({ url: session.url });
+      }
+    );
+  } catch (error) {
+    console.error("Stripe session error:", error);
+    res.status(500).json({ success: false, message: "Failed to create Stripe session" });
+  }
+};
+
 module.exports = {
   createOrder,
   submitPayment,
@@ -1064,5 +1135,6 @@ module.exports = {
   failOrder,
   simulatePayment,
   adminGetAllOrders,
-  adminGetOrder
+  adminGetOrder,
+  createStripeSession
 };

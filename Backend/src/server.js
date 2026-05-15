@@ -1,6 +1,9 @@
+
+
+require("dotenv").config();
+
 const express = require("express");
 const cors = require("cors");
-const dotenv = require("dotenv");
 const path = require("path");
 const readerRoutes = require("./routes/reader.routes");
 const reviewRoutes = require("./routes/review.routes");
@@ -9,14 +12,14 @@ const bookRoutes = require("./routes/book.routes");
 const authorRoutes = require("./routes/author.routes");
 const adminRoutes = require("./routes/admin.routes");
 
-dotenv.config();
-
 const app = express();
 const PORT = process.env.PORT || 5001;
 
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+console.log("Stripe key loaded:", process.env.STRIPE_SECRET_KEY);
 
 // Serve uploaded cover images publicly (covers are not sensitive)
 app.use("/uploads/covers", express.static(path.join(__dirname, "../uploads/covers")));

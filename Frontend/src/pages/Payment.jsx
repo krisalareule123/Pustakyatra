@@ -15,6 +15,7 @@ export default function Payment() {
   const [orderId, setOrderId] = useState(existingOrderId);
   const [loading, setLoading] = useState(!existingOrderId);
   const [esewaLoading, setEsewaLoading] = useState(false);
+  const [stripeLoading, setStripeLoading] = useState(false);
   const [redirecting, setRedirecting] = useState(false);
   const [error, setError] = useState("");
 
@@ -94,6 +95,34 @@ export default function Payment() {
 
   const handleRemovePromo = () => {
     setPromoResult(null); setPromoCode(""); setPromoError("");
+  };
+
+  // Redirect to Stripe Checkout
+  const handleStripePayment = async () => {
+    if (!orderId || redirecting) return;
+
+    setRedirecting(true);
+    setStripeLoading(true);
+    setError("");
+
+    try {
+      const token = localStorage.getItem("token") || localStorage.getItem("authToken");
+      const response = await orderAPI.createStripeSession(token, orderId);
+
+      if (!response.success || !response.url) {
+        setError("Failed to initiate Stripe payment. Please try again.");
+        setRedirecting(false);
+        setStripeLoading(false);
+        return;
+      }
+
+      // Redirect to Stripe Checkout — page navigates away
+      window.location.href = response.url;
+    } catch (err) {
+      setError(err.message || "Failed to initiate Stripe payment.");
+      setRedirecting(false);
+      setStripeLoading(false);
+    }
   };
 
   // Redirect to eSewa — disable button immediately to prevent double clicks
@@ -273,7 +302,7 @@ export default function Payment() {
                   onClick={handleEsewaPayment}
                   disabled={esewaLoading || redirecting || !orderId}
                 >
-                  {redirecting ? "Redirecting to eSewa..." : "Pay with eSewa →"}
+                  {redirecting && esewaLoading ? "Redirecting to eSewa..." : "Pay with eSewa →"}
                 </button>
 
                 {/* Shown when eSewa sandbox is down — remove in production */}
@@ -284,6 +313,27 @@ export default function Payment() {
                   title="Use this when eSewa sandbox is unavailable (502/503)"
                 >
                   🧪 Simulate Payment (eSewa down)
+                </button>
+              </div>
+            </div>
+
+            {/* Stripe / Card Payment */}
+            <div className="esewa-payment-box" style={{ marginTop: 16 }}>
+              <div className="esewa-info-side" style={{ width: "100%" }}>
+                <div className="esewa-logo-box" style={{ borderColor: "#635bff" }}>
+                  <span className="esewa-logo-text" style={{ color: "#635bff" }}>💳 Card</span>
+                </div>
+                <p className="esewa-desc">
+                  Pay securely with your credit or debit card via Stripe.
+                  You will be redirected to the Stripe checkout page.
+                </p>
+                <button
+                  className="btn-esewa-pay"
+                  onClick={handleStripePayment}
+                  disabled={stripeLoading || redirecting || !orderId}
+                  style={{ background: stripeLoading || redirecting || !orderId ? "#a5a0f5" : "#635bff" }}
+                >
+                  {stripeLoading ? "Redirecting to Stripe..." : "Pay with Card →"}
                 </button>
               </div>
             </div>

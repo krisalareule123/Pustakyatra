@@ -37,6 +37,8 @@ export default function Reader() {
   const [bookId, setBookId]           = useState(null);
   const [pageWidth, setPageWidth]     = useState(800);
   const containerRef                  = useRef(null);
+  const pdfPageRef                    = useRef(null); // ref for highlight overlay anchor
+  const [pdfPageRect, setPdfPageRect] = useState(null); // tracks .react-pdf__Page rect
 
   // Zoom / font adjustment state
   const [scale, setScale] = useState(1.0);
@@ -200,8 +202,9 @@ export default function Reader() {
       return;
     }
 
-    // Get the PDF page container to compute relative rects
-    const pageContainer = document.querySelector(".reader-pdf-page");
+    // Use .react-pdf__Page as the reference — it exactly wraps the canvas
+    const reactPdfPage = document.querySelector(".react-pdf__Page");
+    const pageContainer = reactPdfPage || pdfPageRef.current;
     if (!pageContainer) {
       showToast("PDF page not ready. Try again.", "warn");
       return;
@@ -212,15 +215,16 @@ export default function Reader() {
     const range = sel.getRangeAt(0);
     const clientRects = Array.from(range.getClientRects());
 
-    // Convert to relative coordinates (percentage of container size for scale-independence)
+    // Convert to percentage relative to the pdfPageRef element
     const rects = clientRects
-      .filter(r => r.width > 0 && r.height > 0)
+      .filter(r => r.width > 1 && r.height > 1)
       .map(r => ({
         x: ((r.left - containerRect.left) / containerRect.width) * 100,
-        y: ((r.top - containerRect.top) / containerRect.height) * 100,
-        w: (r.width / containerRect.width) * 100,
+        y: ((r.top  - containerRect.top)  / containerRect.height) * 100,
+        w: (r.width  / containerRect.width) * 100,
         h: (r.height / containerRect.height) * 100,
-      }));
+      }))
+      .filter(r => r.x > -5 && r.y > -5 && r.x < 105 && r.y < 105);
 
     if (rects.length === 0) {
       showToast("Could not capture selection position.", "warn");
@@ -358,13 +362,22 @@ export default function Reader() {
 
   const onDocumentLoadSuccess = ({ numPages }) => {
     setNumPages(numPages);
+    // Capture .react-pdf__Page rect after it renders
+    setTimeout(() => {
+      const el = document.querySelector(".react-pdf__Page");
+      if (el) setPdfPageRect(el.getBoundingClientRect());
+    }, 300);
   };
 
   const goToPage = (newPage) => {
     if (!numPages || newPage < 1 || newPage > numPages) return;
     setPageNumber(newPage);
     saveProgress(bookId, newPage);
-    // No scrollIntoView — it causes layout shift. The page area stays fixed.
+    // Re-capture page rect after new page renders
+    setTimeout(() => {
+      const el = document.querySelector(".react-pdf__Page");
+      if (el) setPdfPageRect(el.getBoundingClientRect());
+    }, 400);
   };
 
   const handleDownload = async () => {
@@ -453,11 +466,11 @@ export default function Reader() {
           ) : (
             <span className="reader-access-badge reader-badge-owned">Owned</span>
           )}
-          {access?.canDownload && access?.pdfDownloadUrl && (
+          {/* {access?.canDownload && access?.pdfDownloadUrl && (
             <button className="reader-download-btn" onClick={handleDownload}>
               ↓ Download
             </button>
-          )}
+          )} */}
           {pdfBlobUrl && (
             <button
               className="reader-download-btn"
@@ -709,10 +722,21 @@ export default function Reader() {
             </div>
 
             {/* PDF page rendered by react-pdf */}
-            <div className="reader-pdf-page">
-              {/* Coordinate-based highlight overlays — works for Nepali text */}
+            <div style={{ display: "flex", justifyContent: "center", width: "100%" }}>
+            {/* pdfPageRef wraps ONLY the Page — no padding, exact canvas size */}
+            <div
+              className="reader-pdf-page"
+              ref={pdfPageRef}
+              style={{ position: "relative", display: "inline-block", lineHeight: 0 }}
+            >
+              {/* Coordinate-based highlight overlays — only for highlights with valid rects */}
               {highlights
-                .filter(h => h.page_number === pageNumber && h.rects && h.rects.length > 0)
+                .filter(h =>
+                  h.page_number === pageNumber &&
+                  Array.isArray(h.rects) &&
+                  h.rects.length > 0 &&
+                  h.rects.every(r => typeof r.x === "number" && typeof r.y === "number" && r.w > 0 && r.h > 0)
+                )
                 .map(h =>
                   h.rects.map((r, ri) => (
                     <div
@@ -723,11 +747,10 @@ export default function Reader() {
                         top: `${r.y}%`,
                         width: `${r.w}%`,
                         height: `${r.h}%`,
-                        background: "rgba(253, 224, 71, 0.45)",
+                        background: "rgba(253, 221, 0, 0.35)",
                         pointerEvents: "none",
                         borderRadius: 2,
                         zIndex: 10,
-                        mixBlendMode: "multiply",
                       }}
                     />
                   ))
@@ -749,6 +772,7 @@ export default function Reader() {
                 />
               </Document>
             </div>
+            </div>{/* end centering wrapper */}
 
             {/* Page navigation — bottom */}
             <div className="reader-page-controls reader-page-controls-bottom">

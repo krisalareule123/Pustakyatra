@@ -958,7 +958,24 @@ const getReaderNotifications = (req, res) => {
               });
             });
           }
-          res.status(200).json({ success: true, notifications });
+
+          // Fetch which computed notification IDs have been read
+          db.query(
+            "SELECT notif_id FROM read_notifications WHERE reader_id = ?",
+            [readerId],
+            (err3, readRows) => {
+              const readSet = new Set((readRows || []).map(r => r.notif_id));
+              // Mark each notification as read/unread
+              notifications.forEach(n => {
+                if (n.type === "promo_reward") {
+                  // already has is_read from DB
+                } else {
+                  n.is_read = readSet.has(String(n.id)) ? 1 : 0;
+                }
+              });
+              res.status(200).json({ success: true, notifications });
+            }
+          );
         }
       );
     }
