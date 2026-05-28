@@ -165,31 +165,50 @@ export const authorAPI = {
 
 // Review APIs
 export const reviewAPI = {
-  // Add or update review
+  // Add or update public rating/review (visible to all readers after admin approval)
   addReview: async (token, reviewData) => {
     return apiCall("/reviews", {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+      headers: { Authorization: `Bearer ${token}` },
       body: JSON.stringify(reviewData),
     });
   },
 
-  // Get reviews by book ID
-  getReviewsByBook: async (bookId) => {
-    return apiCall(`/reviews/book/${bookId}`, {
-      method: "GET",
+  // Add or update private author feedback (only visible to author + admin, triggers promo)
+  addPrivateFeedback: async (token, feedbackData) => {
+    return apiCall("/reviews/private", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify(feedbackData),
     });
   },
 
-  // Get user's review for a book
+  // Get public reviews for a book
+  getReviewsByBook: async (bookId) => {
+    return apiCall(`/reviews/book/${bookId}`, { method: "GET" });
+  },
+
+  // Get reader's own public review for a book
   getUserReview: async (token, bookId) => {
     return apiCall(`/reviews/user/${bookId}`, {
       method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  },
+
+  // Get reader's own private feedback for a book
+  getUserPrivateFeedback: async (token, bookId) => {
+    return apiCall(`/reviews/private/user/${bookId}`, {
+      method: "GET",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  },
+
+  // Check if reader has purchased/rented a book
+  checkAccess: async (token, bookId) => {
+    return apiCall(`/reviews/access/${bookId}`, {
+      method: "GET",
+      headers: { Authorization: `Bearer ${token}` },
     });
   },
 
@@ -197,9 +216,7 @@ export const reviewAPI = {
   deleteReview: async (token, reviewId) => {
     return apiCall(`/reviews/${reviewId}`, {
       method: "DELETE",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+      headers: { Authorization: `Bearer ${token}` },
     });
   },
 };
@@ -235,14 +252,6 @@ export const orderAPI = {
       method: "POST",
       headers: { Authorization: `Bearer ${token}` },
       body: JSON.stringify({ orderId, reason }),
-    });
-  },
-
-  createStripeSession: async (token, orderId) => {
-    return apiCall("/orders/stripe/create-session", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ order_id: orderId }),
     });
   },
 

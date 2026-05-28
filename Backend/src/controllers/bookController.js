@@ -389,4 +389,43 @@ const deleteBook = (req, res) => {
   );
 };
 
-module.exports = { createBook, updateBook, updateBookPdf, publishBook, deleteBook, getBooks, getBook, servePdf, downloadPdf, createAuthorNotification };
+module.exports = { createBook, updateBook, updateBookPdf, publishBook, deleteBook, getBooks, getBook, servePdf, downloadPdf, createAuthorNotification, getLaunchPromo };
+
+// ─── GET active New Book Launch promo for a specific book (public) ────────────
+// Returns the promo code + discount info if the book's author has an active
+// new_launch promo that covers this book. Used by BookDetails page.
+function getLaunchPromo(req, res) {
+  const { bookId } = req.params;
+  db.query(
+    `SELECT pc.code, pc.discount_type, pc.discount_value, pc.expiry_date
+     FROM promo_codes pc
+     JOIN books b ON b.author_id = pc.author_id
+     WHERE b.book_id = ?
+       AND pc.occasion = 'new_launch'
+       AND pc.status = 'active'
+       AND pc.expiry_date >= CURDATE()
+       AND (pc.promo_scope = 'all_books' OR pc.book_id = ?)
+     ORDER BY pc.created_at DESC
+     LIMIT 1`,
+    [bookId, bookId],
+    (err, rows) => {
+      if (err || !rows || rows.length === 0) {
+        return res.json({ success: true, promo: null });
+      }
+      const p = rows[0];
+      const discountText = p.discount_type === "percentage"
+        ? `${p.discount_value}% off`
+        : `Rs ${p.discount_value} off`;
+      res.json({
+        success: true,
+        promo: {
+          code: p.code,
+          discountText,
+          expiry: new Date(p.expiry_date).toLocaleDateString("en-NP", {
+            year: "numeric", month: "short", day: "numeric"
+          })
+        }
+      });
+    }
+  );
+}

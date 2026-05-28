@@ -374,7 +374,7 @@ const toggleUserStatus = (req, res) => {
 // GET /api/admin/reviews  (protected)
 const getAdminReviews = (req, res) => {
   db.query(
-    `SELECT r.review_id, r.rating, r.comment, r.status, r.created_at,
+    `SELECT r.review_id, r.rating, r.comment, r.status, r.review_type, r.created_at,
             rd.full_name AS reader_name,
             b.title AS book_title
      FROM reviews r

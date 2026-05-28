@@ -81,7 +81,7 @@ export default function AdminReviews() {
           <div>
             <h3 className="admin-card-title">Review Moderation</h3>
             <p style={{ margin: "3px 0 0", fontSize: 12, color: "#888" }}>
-              Approve reviews to make them visible to authors and readers.
+              Approve public reviews to make them visible to readers. Approve private feedback to make it visible to the author.
             </p>
           </div>
           <div className="admin-toolbar">
@@ -115,6 +115,14 @@ export default function AdminReviews() {
                   <span style={{ fontSize: 13, fontWeight: 700, color: "#1a2912" }}>{r.rating}.0</span>
                   <span style={{ padding: "2px 10px", borderRadius: 20, fontSize: 11, fontWeight: 700,
                     background: st.background, color: st.color }}>{st.label}</span>
+                  {/* Review type badge */}
+                  <span style={{
+                    padding: "2px 10px", borderRadius: 20, fontSize: 11, fontWeight: 700,
+                    background: r.review_type === "private" ? "#dbeafe" : "#e6f4ea",
+                    color: r.review_type === "private" ? "#1a56db" : "#1e6b35"
+                  }}>
+                    {r.review_type === "private" ? "🔒 Private Feedback" : "⭐ Public Review"}
+                  </span>
                 </div>
                 <span style={{ fontSize: 12, color: "#aaa" }}>{fmtDate(r.created_at)}</span>
               </div>
@@ -135,7 +143,7 @@ export default function AdminReviews() {
                 </div>
               )}
 
-              {/* Actions */}
+              {/* Actions — Approve/Hide/Unhide applies to both public reviews and private feedback */}
               <div style={{ display: "flex", gap: 8 }}>
                 {r.status === "pending" && (
                   <button className="admin-btn admin-btn-primary"

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
-import { readerAPI, orderAPI } from "../services/api";
+import { readerAPI, orderAPI, reviewAPI } from "../services/api";
 import "./UserDashboard.css";
 
 const NAV = [
@@ -52,6 +52,15 @@ export default function UserDashboard() {
   const [showPwForm,   setShowPwForm]   = useState(false);
   const [receipt,      setReceipt]      = useState(null); // order to show in receipt modal
   const [openingBook,  setOpeningBook]  = useState(null);
+
+  // ── Private author feedback state (My Library cards) ──────────────────────
+  const [fbOpen,    setFbOpen]    = useState(null); // bookId with form open
+  const [fbDone,    setFbDone]    = useState({});   // { bookId: { rating, review_text } | true }
+  const [fbRating,  setFbRating]  = useState(0);
+  const [fbHover,   setFbHover]   = useState(0);
+  const [fbText,    setFbText]    = useState("");
+  const [fbLoading, setFbLoading] = useState(false);
+  const [fbMsg,     setFbMsg]     = useState({ bookId: null, type: "", text: "" });
 
   const initials = (name) => name?.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase() || "U";
 
@@ -208,7 +217,21 @@ export default function UserDashboard() {
     }
     if (key === "library") {
       orderAPI.getLibrary(token)
-        .then(res => { if (res.success) setLibrary(res.library); })
+        .then(res => {
+          if (res.success) {
+            setLibrary(res.library);
+            // Pre-load existing private feedback for each book
+            res.library.forEach(book => {
+              reviewAPI.getUserPrivateFeedback(token, book.bookId)
+                .then(r => {
+                  if (r.success && r.feedback) {
+                    setFbDone(prev => ({ ...prev, [book.bookId]: r.feedback }));
+                  }
+                })
+                .catch(() => {});
+            });
+          }
+        })
         .finally(() => setLibLoaded(true));
     }
     if (key === "notifications") {
@@ -236,6 +259,34 @@ export default function UserDashboard() {
       const res = await orderAPI.issueReadToken(token, bookId);
       if (res.success && res.readToken) navigate(`/reader/${res.readToken}`);
     } finally { setOpeningBook(null); }
+  };
+
+  // ── Private feedback handlers ──────────────────────────────────────────────
+  const openFb = (bookId) => {
+    const existing = fbDone[bookId];
+    setFbRating(existing?.rating || 0);
+    setFbText(existing?.review_text || "");
+    setFbMsg({ bookId: null, type: "", text: "" });
+    setFbOpen(bookId);
+  };
+  const closeFb = () => { setFbOpen(null); setFbRating(0); setFbText(""); setFbMsg({ bookId: null, type: "", text: "" }); };
+  const submitFb = async (e, bookId) => {
+    e.preventDefault();
+    if (fbRating === 0) { setFbMsg({ bookId, type: "error", text: "Please select a rating." }); return; }
+    if (!fbText.trim()) { setFbMsg({ bookId, type: "error", text: "Please write your feedback." }); return; }
+    setFbLoading(true); setFbMsg({ bookId: null, type: "", text: "" });
+    try {
+      const token = localStorage.getItem("token") || localStorage.getItem("authToken");
+      const res = await reviewAPI.addPrivateFeedback(token, { bookId: Number(bookId), rating: Number(fbRating), reviewText: fbText.trim() });
+      if (res.success) {
+        setFbDone(prev => ({ ...prev, [bookId]: { rating: fbRating, review_text: fbText.trim() } }));
+        setFbMsg({ bookId, type: "success", text: "Feedback sent to the author!" });
+        setFbOpen(null);
+        setTimeout(() => setFbMsg({ bookId: null, type: "", text: "" }), 4000);
+      }
+    } catch (err) {
+      setFbMsg({ bookId, type: "error", text: err.message || "Failed to send feedback." });
+    } finally { setFbLoading(false); }
   };
 
   const daysLeft = (expiresAt) => {
@@ -951,6 +1002,111 @@ export default function UserDashboard() {
                               cursor: "pointer", textAlign: "center", textDecoration: "none", display: "block" }}>
                               Renew Rental
                             </Link>
+                          )}
+
+                          {/* ── Private Author Feedback ── */}
+                          {!expired && (
+                            <div style={{ borderTop: "1px solid #f0ede8", paddingTop: 10, marginTop: 2 }}>
+
+                              {/* Success message */}
+                              {fbMsg.bookId === book.bookId && fbMsg.type === "success" && (
+                                <p style={{ fontSize: 11, color: "#065f46", background: "#d1fae5",
+                                  borderRadius: 6, padding: "5px 8px", margin: "0 0 6px", lineHeight: 1.4 }}>
+                                  {fbMsg.text}
+                                </p>
+                              )}
+
+                              {/* Already submitted — show summary + edit */}
+                              {fbDone[book.bookId] && fbOpen !== book.bookId && (
+                                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                  <span style={{ fontSize: 11, color: "#1a56db", fontWeight: 600 }}>
+                                    ✉️ Feedback sent
+                                    {typeof fbDone[book.bookId] === "object" &&
+                                      ` · ${"★".repeat(fbDone[book.bookId].rating)}`}
+                                  </span>
+                                  <button onClick={() => openFb(book.bookId)}
+                                    style={{ fontSize: 11, padding: "2px 10px", borderRadius: 5,
+                                      background: "#eff6ff", border: "1px solid #bfdbfe",
+                                      color: "#1a56db", cursor: "pointer", fontWeight: 600 }}>
+                                    Edit
+                                  </button>
+                                </div>
+                              )}
+
+                              {/* Send feedback button (not yet submitted) */}
+                              {!fbDone[book.bookId] && fbOpen !== book.bookId && (
+                                <button onClick={() => openFb(book.bookId)}
+                                  style={{ width: "100%", padding: "7px 0", background: "transparent",
+                                    color: "#1a56db", border: "1px dashed #93c5fd", borderRadius: 7,
+                                    fontSize: 11, fontWeight: 600, cursor: "pointer", textAlign: "center" }}>
+                                  ✉️ Send Feedback to Author
+                                </button>
+                              )}
+
+                              {/* Inline feedback form */}
+                              {fbOpen === book.bookId && (
+                                <div style={{ background: "#f0f7ff", border: "1px solid #bfdbfe",
+                                  borderRadius: 8, padding: 12 }}>
+                                  <p style={{ fontSize: 11, fontWeight: 700, color: "#1a56db",
+                                    margin: "0 0 2px" }}>🔒 Private Author Feedback</p>
+                                  <p style={{ fontSize: 10, color: "#6b7280", margin: "0 0 8px" }}>
+                                    Only the author and admin can see this
+                                  </p>
+
+                                  {fbMsg.bookId === book.bookId && fbMsg.type === "error" && (
+                                    <p style={{ fontSize: 11, color: "#991b1b", background: "#fee2e2",
+                                      borderRadius: 5, padding: "5px 8px", margin: "0 0 8px" }}>
+                                      {fbMsg.text}
+                                    </p>
+                                  )}
+
+                                  <form onSubmit={(e) => submitFb(e, book.bookId)}>
+                                    {/* Stars */}
+                                    <div style={{ display: "flex", gap: 3, marginBottom: 8 }}>
+                                      {[1,2,3,4,5].map(star => (
+                                        <button key={star} type="button"
+                                          onClick={() => setFbRating(star)}
+                                          onMouseEnter={() => setFbHover(star)}
+                                          onMouseLeave={() => setFbHover(0)}
+                                          style={{ background: "none", border: "none", fontSize: 20,
+                                            color: star <= (fbHover || fbRating) ? "#f59e0b" : "#d1d5db",
+                                            cursor: "pointer", padding: 0, lineHeight: 1 }}>
+                                          ★
+                                        </button>
+                                      ))}
+                                    </div>
+
+                                    <textarea
+                                      value={fbText}
+                                      onChange={e => setFbText(e.target.value)}
+                                      placeholder="Share your thoughts with the author..."
+                                      rows={3}
+                                      required
+                                      style={{ width: "100%", padding: "8px 10px", border: "1px solid #bfdbfe",
+                                        borderRadius: 6, fontSize: 12, fontFamily: "inherit", resize: "vertical",
+                                        background: "white", color: "#1a2912", boxSizing: "border-box",
+                                        outline: "none" }}
+                                    />
+
+                                    <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+                                      <button type="submit"
+                                        disabled={fbLoading || fbRating === 0 || !fbText.trim()}
+                                        style={{ flex: 1, padding: "7px 0", background: fbLoading || fbRating === 0 || !fbText.trim() ? "#93c5fd" : "#1a56db",
+                                          color: "white", border: "none", borderRadius: 6,
+                                          fontSize: 11, fontWeight: 700, cursor: fbLoading || fbRating === 0 || !fbText.trim() ? "not-allowed" : "pointer" }}>
+                                        {fbLoading ? "Sending..." : "Send to Author"}
+                                      </button>
+                                      <button type="button" onClick={closeFb} disabled={fbLoading}
+                                        style={{ padding: "7px 12px", background: "transparent",
+                                          color: "#6b7280", border: "1px solid #d1d5db", borderRadius: 6,
+                                          fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
+                                        Cancel
+                                      </button>
+                                    </div>
+                                  </form>
+                                </div>
+                              )}
+                            </div>
                           )}
                         </div>
                       );

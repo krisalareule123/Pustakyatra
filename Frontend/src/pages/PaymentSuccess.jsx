@@ -80,7 +80,13 @@ export default function PaymentSuccess() {
         <div className="payment-success">
           <div className="success-icon">✅</div>
           <h2>Payment Successful</h2>
-          <p>Your payment has been verified. Your e-books are now available.</p>
+          {searchParams.get("demo") === "true" ? (
+            <p style={{ color: "#059669", fontWeight: "bold", background: "#d1fae5", padding: "8px", borderRadius: "4px" }}>
+              Demo Payment Successful (For Viva Demonstration)
+            </p>
+          ) : (
+            <p>Your payment has been verified. Your e-books are now available.</p>
+          )}
 
           <div className="success-details">
             {orderData?.orderId && (

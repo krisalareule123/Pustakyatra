@@ -53,8 +53,40 @@ const createOrder = (req, res) => {
           [readerId], () => {}
         );
 
-        // Step 3: Create the order
-        db.query(
+        // Step 2b: Check for duplicate active rentals — prevent buying the same rental twice
+        const rentItems = items.filter(i => i.type === "rent");
+        if (rentItems.length > 0) {
+          const rentBookIds = rentItems.map(i => i.bookId);
+          const rentPlaceholders = rentBookIds.map(() => "?").join(",");
+          db.query(
+            `SELECT oi.book_id, oi.book_title FROM orders o
+             JOIN order_items oi ON oi.order_id = o.order_id
+             WHERE o.reader_id = ? AND o.status = 'paid'
+               AND oi.item_type = 'rent'
+               AND oi.access_expires_at > NOW()
+               AND oi.book_id IN (${rentPlaceholders})`,
+            [readerId, ...rentBookIds],
+            (errDup, dupRows) => {
+              if (errDup) {
+                return res.status(500).json({ success: false, message: "Failed to validate order" });
+              }
+              if (dupRows && dupRows.length > 0) {
+                const titles = dupRows.map(r => `"${r.book_title}"`).join(", ");
+                return res.status(400).json({
+                  success: false,
+                  message: `You already have an active rental for ${titles}. Please wait until your current rental expires before renting again.`
+                });
+              }
+              // No duplicates — proceed to create order
+              doCreateOrder();
+            }
+          );
+        } else {
+          doCreateOrder();
+        }
+
+        function doCreateOrder() {
+          db.query(
           `INSERT INTO orders (reader_id, total_amount, promo_code_id, discount_amount, discounted_total, status)
            VALUES (?, ?, ?, ?, ?, 'pending_payment')`,
           [
@@ -104,9 +136,10 @@ const createOrder = (req, res) => {
               }
             );
           }
-        );
-      }
-    );
+        ); // end db.query INSERT orders
+        } // end doCreateOrder
+      } // end bookRows callback
+    ); // end db.query SELECT books
   } catch (error) {
     console.error("Create order error:", error);
     res.status(500).json({ success: false, message: "Server error. Please try again later" });
@@ -323,14 +356,8 @@ const initiateEsewa = (req, res) => {
         const signatureMessage = `total_amount=${totalAmountStr},transaction_uuid=${transactionUuid},product_code=${productCode}`;
         const signature = generateEsewaSignature(signatureMessage);
 
-        const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
-
-        const failureParams = new URLSearchParams({
-          orderId: String(orderId),
-          totalAmount: amount,
-          reason: "failed",
-          ...(items ? { items: JSON.stringify(items) } : {})
-        });
+        const frontendUrlStr = process.env.FRONTEND_URL || "http://127.0.0.1:5173";
+        const frontendUrl = frontendUrlStr.replace("localhost", "127.0.0.1");
 
         const paymentData = {
           amount: amount,
@@ -341,24 +368,10 @@ const initiateEsewa = (req, res) => {
           total_amount: totalAmountStr,
           transaction_uuid: transactionUuid,
           success_url: `${frontendUrl}/payment/success`,
-          failure_url: `${frontendUrl}/payment/failure?${failureParams.toString()}`,
+          failure_url: `${frontendUrl}/payment/failure?orderId=${orderId}`,
           signed_field_names: "total_amount,transaction_uuid,product_code",
           signature: signature,
         };
-
-        // Debug log — verify payload before sending to frontend
-        console.log("=== eSewa Payload Debug ===");
-        console.log("Product Code    :", productCode);
-        console.log("Amount          :", amount);
-        console.log("Total Amount    :", totalAmountStr);
-        console.log("Transaction UUID:", transactionUuid);
-        console.log("Signature Msg   :", signatureMessage);
-        console.log("Signature       :", signature);
-        console.log("Payment URL     :", process.env.ESEWA_PAYMENT_URL);
-        console.log("Success URL     :", paymentData.success_url);
-        console.log("Failure URL     :", paymentData.failure_url);
-        console.log("Full Payload    :", JSON.stringify(paymentData, null, 2));
-        console.log("==========================");
 
         // Validate all required fields are present and non-empty
         const requiredFields = ["amount","tax_amount","product_service_charge","product_delivery_charge","total_amount","transaction_uuid","product_code","success_url","failure_url","signed_field_names","signature"];
@@ -547,7 +560,7 @@ const verifyEsewa = async (req, res) => {
 // Helper: fetch order details and send success response
 const fetchAndReturnOrder = (orderId, transaction_code, res) => {
   db.query(
-    `SELECT o.order_id, o.total_amount, o.transaction_code, o.transaction_uuid,
+    `SELECT o.order_id, o.total_amount, o.discounted_total, o.transaction_code, o.transaction_uuid,
             o.payment_reference, o.paid_at,
             oi.book_id, oi.book_title, oi.item_type, oi.rent_days, oi.access_expires_at
      FROM orders o
@@ -567,11 +580,16 @@ const fetchAndReturnOrder = (orderId, transaction_code, res) => {
           }))
         : [];
 
+      // Use discounted_total if a promo was applied, otherwise use total_amount
+      const amountPaid = rows?.[0]?.discounted_total != null
+        ? rows[0].discounted_total
+        : rows?.[0]?.total_amount;
+
       res.status(200).json({
         success: true,
         message: "Payment verified successfully",
         orderId: parseInt(orderId),
-        totalAmount: rows?.[0]?.total_amount,
+        totalAmount: amountPaid,
         transactionCode: transaction_code || rows?.[0]?.transaction_code,
         paymentReference: rows?.[0]?.payment_reference,
         paidAt: rows?.[0]?.paid_at,
@@ -587,6 +605,8 @@ const getLibrary = (req, res) => {
   try {
     const readerId = req.user.reader_id;
 
+    // Fetch all paid items. For rentals of the same book, we deduplicate
+    // in JS below — keeping only the one with the latest access_expires_at.
     const query = `
       SELECT
         oi.book_id,
@@ -596,12 +616,7 @@ const getLibrary = (req, res) => {
         oi.access_expires_at,
         o.order_id,
         o.paid_at,
-        b.deleted_at AS book_deleted_at,
-        CASE
-          WHEN oi.item_type = 'rent' AND oi.access_expires_at IS NOT NULL
-            THEN GREATEST(0, DATEDIFF(oi.access_expires_at, NOW()))
-          ELSE NULL
-        END AS remaining_days
+        b.deleted_at AS book_deleted_at
       FROM orders o
       JOIN order_items oi ON o.order_id = oi.order_id
       LEFT JOIN books b ON b.book_id = oi.book_id
@@ -619,17 +634,54 @@ const getLibrary = (req, res) => {
         return res.status(500).json({ success: false, message: "Server error" });
       }
 
-      const library = results.map(r => ({
+      // Deduplicate: for each book_id, keep:
+      //   - 'buy' access if it exists (permanent, always wins)
+      //   - for 'rent', keep only the entry with the latest access_expires_at
+      const seen = {}; // key: book_id → best entry so far
+
+      results.forEach(r => {
+        const key = r.book_id;
+        const existing = seen[key];
+
+        if (!existing) {
+          seen[key] = r;
+          return;
+        }
+
+        // Purchased access always beats rental
+        if (r.access_type === "buy") {
+          seen[key] = r;
+          return;
+        }
+        if (existing.access_type === "buy") {
+          return; // keep existing purchased entry
+        }
+
+        // Both are rentals — keep the one expiring latest
+        const existingExp = existing.access_expires_at ? new Date(existing.access_expires_at) : new Date(0);
+        const newExp      = r.access_expires_at        ? new Date(r.access_expires_at)        : new Date(0);
+        if (newExp > existingExp) {
+          seen[key] = r;
+        }
+      });
+
+      const library = Object.values(seen).map(r => ({
         bookId: r.book_id,
         bookTitle: r.book_title,
         accessType: r.access_type,
         rentDays: r.rent_days,
-        rentExpiresAt: r.access_expires_at,
-        remainingDays: r.remaining_days,
+        rentExpiresAt: r.access_expires_at, // raw ISO timestamp — frontend calculates display
         orderId: r.order_id,
         paidAt: r.paid_at,
         isDeleted: !!r.book_deleted_at
       }));
+
+      // Sort: purchased first, then rentals by expiry (soonest first)
+      library.sort((a, b) => {
+        if (a.accessType === "buy" && b.accessType !== "buy") return -1;
+        if (b.accessType === "buy" && a.accessType !== "buy") return 1;
+        return new Date(b.paidAt) - new Date(a.paidAt);
+      });
 
       res.status(200).json({ success: true, library });
     });
@@ -992,7 +1044,7 @@ const adminGetOrder = (req, res) => {
 };
 
 // DEV ONLY: Simulate a successful payment without going through eSewa
-// Useful when eSewa sandbox is down (502/503 errors)
+// Useful for Viva Demonstration
 const simulatePayment = (req, res) => {
   try {
     const readerId = req.user.reader_id;
@@ -1002,122 +1054,46 @@ const simulatePayment = (req, res) => {
       return res.status(400).json({ success: false, message: "orderId is required" });
     }
 
-    const fakeTransactionCode = "SIM" + Date.now();
-    const paymentReference = `Simulated/${fakeTransactionCode}/${new Date().toISOString().slice(0, 10)}`;
-
     db.query(
-      `UPDATE orders
-       SET status = 'paid',
-           transaction_uuid = ?,
-           transaction_code = ?,
-           payment_reference = ?,
-           paid_at = NOW()
-       WHERE order_id = ? AND reader_id = ? AND status = 'pending_payment'`,
-      [`SIM${orderId}T${Date.now()}`, fakeTransactionCode, paymentReference, orderId, readerId],
-      (err, result) => {
-        if (err) {
-          console.error("Simulate payment DB error:", err.message);
-          return res.status(500).json({ success: false, message: "DB error" });
-        }
-        if (result.affectedRows === 0) {
-          return res.status(404).json({ success: false, message: "Order not found or already processed" });
-        }
-
-        // Grant book access
-        db.query(
-          `UPDATE order_items
-           SET access_expires_at = CASE
-             WHEN item_type = 'rent' THEN DATE_ADD(NOW(), INTERVAL rent_days DAY)
-             ELSE NULL
-           END
-           WHERE order_id = ?`,
-          [orderId], () => {}
-        );
-
-        // Record promo usage if applied (non-blocking)
-        db.query("SELECT promo_code_id FROM orders WHERE order_id = ?", [orderId], (errP, pRows) => {
-          if (!errP && pRows?.[0]?.promo_code_id) {
-            const { recordPromoUsage } = require("./promoController");
-            recordPromoUsage(pRows[0].promo_code_id, readerId, orderId);
-          }
-        });
-
-        return fetchAndReturnOrder(orderId, fakeTransactionCode, res);
-      }
-    );
-  } catch (error) {
-    res.status(500).json({ success: false, message: "Server error" });
-  }
-};
-
-// Create a Stripe Checkout Session
-const createStripeSession = async (req, res) => {
-  try {
-    const { order_id } = req.body;
-
-    if (!order_id) {
-      return res.status(400).json({ success: false, message: "order_id is required" });
-    }
-
-    // Fetch order from DB — use DB amount, never trust frontend
-    db.query(
-      "SELECT order_id, total_amount, discounted_total, status FROM orders WHERE order_id = ?",
-      [order_id],
-      async (err, results) => {
-        if (err) {
-          console.error("DB error fetching order for Stripe:", err);
-          return res.status(500).json({ success: false, message: "Database error" });
-        }
-
-        if (!results || results.length === 0) {
+      "SELECT order_id, total_amount, discounted_total FROM orders WHERE order_id = ? AND reader_id = ?",
+      [orderId, readerId],
+      (err, results) => {
+        if (err || results.length === 0) {
           return res.status(404).json({ success: false, message: "Order not found" });
         }
 
         const order = results[0];
-
-        // Use discounted_total if a promo was applied, otherwise use total_amount
-        const amount = order.discounted_total != null
+        const effectiveAmount = order.discounted_total != null
           ? parseFloat(order.discounted_total)
           : parseFloat(order.total_amount);
 
-        // Safety check: ensure Stripe key is configured
-        if (!process.env.STRIPE_SECRET_KEY) {
-          return res.status(500).json({
-            success: false,
-            message: "Stripe secret key is not configured"
-          });
-        }
+        const transaction_code = "SIM" + Date.now();
+        const status = "COMPLETE";
+        const total_amount = effectiveAmount.toFixed(2);
+        const transaction_uuid = `PK${orderId}T${Date.now()}`;
+        const product_code = process.env.ESEWA_PRODUCT_CODE || "EPAYTEST";
+        const signed_field_names = "transaction_code,status,total_amount,transaction_uuid,product_code,signed_field_names";
 
-        // Debug log (temporary) — confirm key is loaded
-        console.log("Stripe key loaded:", !!process.env.STRIPE_SECRET_KEY);
+        const decoded = {
+          transaction_code,
+          status,
+          total_amount,
+          transaction_uuid,
+          product_code,
+          signed_field_names
+        };
 
-        const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+        const signatureMessage = signed_field_names.split(",").map(f => `${f}=${decoded[f]}`).join(",");
+        const signature = generateEsewaSignature(signatureMessage);
+        decoded.signature = signature;
 
-        const session = await stripe.checkout.sessions.create({
-          payment_method_types: ["card"],
-          mode: "payment",
-          line_items: [
-            {
-              price_data: {
-                currency: "usd",
-                product_data: {
-                  name: "Book Purchase / Rent",
-                },
-                unit_amount: Math.round(amount * 100), // Stripe uses cents
-              },
-              quantity: 1,
-            },
-          ],
-          success_url: "http://localhost:5173/payment/success",
-          cancel_url: "http://localhost:5173/payment/failure",
-        });
-
-        res.status(200).json({ url: session.url });
+        const encodedData = Buffer.from(JSON.stringify(decoded)).toString("base64");
+        
+        res.status(200).json({ success: true, encodedData });
       }
     );
   } catch (error) {
-    console.error("Stripe session error:", error);
-    res.status(500).json({ success: false, message: "Failed to create Stripe session" });
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
@@ -1135,6 +1111,5 @@ module.exports = {
   failOrder,
   simulatePayment,
   adminGetAllOrders,
-  adminGetOrder,
-  createStripeSession
+  adminGetOrder
 };

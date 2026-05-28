@@ -334,3 +334,201 @@
     gap: 8px;
   }
 }
+
+/* ─── Two-section layout ──────────────────────────────────────────────────── */
+
+.review-section-block {
+  margin-bottom: 40px;
+}
+
+.review-section-block + .review-section-block {
+  border-top: 2px dashed #e9ecef;
+  padding-top: 36px;
+}
+
+.review-section-desc {
+  font-size: 13px;
+  color: #6c757d;
+  margin: -12px 0 20px;
+  line-height: 1.5;
+}
+
+/* ─── Private feedback block ─────────────────────────────────────────────── */
+
+.private-feedback-block {
+  background: #f8faff;
+  border-radius: 12px;
+  padding: 28px;
+  border: 1.5px solid #dbeafe;
+}
+
+.private-feedback-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.private-feedback-header h2 {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1a2912;
+  margin: 0;
+}
+
+.private-badge {
+  font-size: 11px;
+  font-weight: 700;
+  background: #dbeafe;
+  color: #1a56db;
+  padding: 3px 10px;
+  border-radius: 20px;
+  letter-spacing: 0.4px;
+}
+
+/* ─── Promo reward hint ───────────────────────────────────────────────────── */
+
+.promo-reward-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: linear-gradient(135deg, #fffbeb, #fef3c7);
+  border: 1.5px solid #fde68a;
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 20px;
+  font-size: 13.5px;
+  color: #78350f;
+  line-height: 1.55;
+}
+
+.promo-hint-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* ─── Write private feedback button ─────────────────────────────────────── */
+
+.btn-write-private {
+  padding: 12px 24px;
+  background: #1a56db;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+}
+
+.btn-write-private:hover {
+  background: #1447c0;
+  transform: translateY(-1px);
+}
+
+/* ─── Private form container ─────────────────────────────────────────────── */
+
+.private-form-container {
+  background: #eff6ff;
+  border: 1.5px solid #bfdbfe;
+}
+
+.btn-submit-private {
+  padding: 12px 32px;
+  background: #1a56db;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-submit-private:hover:not(:disabled) {
+  background: #1447c0;
+}
+
+.btn-submit-private:disabled {
+  background: #93c5fd;
+  cursor: not-allowed;
+}
+
+/* ─── Reader's own review/feedback card ──────────────────────────────────── */
+
+.review-own-card {
+  background: #f0f7ec;
+  border: 1.5px solid #c3e6b0;
+  border-radius: 10px;
+  padding: 16px 18px;
+  margin-bottom: 20px;
+}
+
+.private-own-card {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+
+.btn-edit-review {
+  font-size: 12px;
+  padding: 4px 12px;
+  border-radius: 6px;
+  background: #f0f0f0;
+  border: none;
+  cursor: pointer;
+  color: #555;
+  font-weight: 600;
+}
+
+.btn-edit-review:hover {
+  background: #e0e0e0;
+}
+
+.btn-edit-inline {
+  font-size: 12px;
+  padding: 3px 10px;
+  border-radius: 6px;
+  background: #f0f0f0;
+  border: none;
+  cursor: pointer;
+  color: #555;
+  font-weight: 600;
+}
+
+/* ─── Login / access notes ───────────────────────────────────────────────── */
+
+.review-login-note {
+  font-size: 13px;
+  color: #6c757d;
+  margin-bottom: 20px;
+}
+
+.review-login-note a {
+  color: #3b5723;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.review-login-note a:hover {
+  text-decoration: underline;
+}
+
+.review-prompt-note {
+  font-size: 12px;
+  color: #6c757d;
+  margin: 6px 0 0;
+}
+/* ─────────────────────────────────────────────────────────────────────────── */
+
+/* Pending approval notice */
+.review-pending-notice {
+  background: #fffbeb;
+  border: 1.5px solid #fde68a;
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 13.5px;
+  color: #78350f;
+  margin-bottom: 20px;
+  line-height: 1.5;
+}

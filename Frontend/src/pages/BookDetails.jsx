@@ -30,6 +30,7 @@ export default function BookDetails() {
   const [notFound, setNotFound] = useState(false);
   const [inCartBuy, setInCartBuy] = useState(false);
   const [inCartRent, setInCartRent] = useState(false);
+  const [launchPromo, setLaunchPromo] = useState(null); // { code, discountText, expiry }
 
   // Load book from real API
   useEffect(() => {
@@ -42,6 +43,12 @@ export default function BookDetails() {
       })
       .catch(() => setNotFound(true))
       .finally(() => setLoading(false));
+
+    // Fetch active New Book Launch promo for this book (non-blocking)
+    fetch(`${API}/books/${realId}/launch-promo`)
+      .then(r => r.json())
+      .then(d => { if (d.success && d.promo) setLaunchPromo(d.promo); })
+      .catch(() => {});
   }, [realId]);
 
   // Sync cart state
@@ -170,6 +177,34 @@ export default function BookDetails() {
             <div className="thuprai-author">
               by <strong>{book.author_name || "Unknown Author"}</strong>
             </div>
+
+            {/* New Book Launch promo banner — shown when author has an active launch promo */}
+            {launchPromo && (
+              <div style={{
+                display: "flex", alignItems: "center", gap: 12,
+                background: "linear-gradient(135deg, #fffbeb, #fef3c7)",
+                border: "1.5px solid #fde68a", borderRadius: 10,
+                padding: "12px 16px", marginBottom: 16
+              }}>
+                <span style={{ fontSize: 22 }}>🚀</span>
+                <div style={{ flex: 1 }}>
+                  <p style={{ margin: 0, fontWeight: 700, fontSize: 14, color: "#78350f" }}>
+                    New Book Launch Offer — {launchPromo.discountText}!
+                  </p>
+                  <p style={{ margin: "3px 0 0", fontSize: 12, color: "#92400e" }}>
+                    Use code{" "}
+                    <span style={{
+                      fontFamily: "monospace", fontWeight: 800, fontSize: 13,
+                      background: "#fef9c3", padding: "1px 7px", borderRadius: 4,
+                      border: "1px solid #fde68a", letterSpacing: 0.5
+                    }}>
+                      {launchPromo.code}
+                    </span>
+                    {" "}at checkout · Valid until {launchPromo.expiry}
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* Purchase options — side by side */}
             <div className="pk-options-row">

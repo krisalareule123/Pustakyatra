@@ -1,6 +1,6 @@
 const express = require("express");
 const jwt = require("jsonwebtoken");
-const { createBook, updateBook, updateBookPdf, publishBook, deleteBook, getBooks, getBook, servePdf, downloadPdf } = require("../controllers/bookController");
+const { createBook, updateBook, updateBookPdf, publishBook, deleteBook, getBooks, getBook, servePdf, downloadPdf, getLaunchPromo } = require("../controllers/bookController");
 const authReader = require("../middleware/authReader");
 const { uploadBook } = require("../config/upload");
 
@@ -29,6 +29,7 @@ const withUpload = (req, res, next) => {
 
 // Public
 router.get("/", getBooks);
+router.get("/:bookId/launch-promo", getLaunchPromo);
 router.get("/:bookId", getBook);
 
 // Author-protected (uses author JWT)

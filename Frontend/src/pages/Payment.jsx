@@ -3,6 +3,91 @@ import { useLocation, useNavigate, Link } from "react-router-dom";
 import { orderAPI } from "../services/api";
 import "./Payment.css";
 
+// ─── Demo eSewa Modal ────────────────────────────────────────────────────────
+function DemoEsewaModal({ amount, onConfirm, onCancel, processing }) {
+  return (
+    <div className="demo-modal-overlay">
+      <div className="demo-modal">
+
+        {/* Header */}
+        <div className="demo-modal-header">
+          <div className="demo-esewa-brand">
+            <span className="demo-esewa-logo">eSewa</span>
+          </div>
+          <span className="demo-badge">🧪 Demo Mode — Viva Demonstration</span>
+        </div>
+
+        {/* Processing overlay */}
+        {processing && (
+          <div className="demo-processing-overlay">
+            <div className="demo-processing-spinner"></div>
+            <p className="demo-processing-text">Processing Payment…</p>
+            <p className="demo-processing-sub">Please do not close this window</p>
+          </div>
+        )}
+
+        {/* Body */}
+        {!processing && (
+          <>
+            <div className="demo-modal-body">
+
+              {/* Merchant info */}
+              <div className="demo-merchant-row">
+                <div className="demo-merchant-icon">📚</div>
+                <div>
+                  <p className="demo-merchant-name">Pustakyatra Digital Library</p>
+                  <p className="demo-merchant-sub">E-book Purchase / Rental</p>
+                </div>
+              </div>
+
+              {/* Amount */}
+              <div className="demo-amount-box">
+                <p className="demo-amount-label">Total Amount</p>
+                <p className="demo-amount-value">Rs {Number(amount).toFixed(2)}</p>
+              </div>
+
+              {/* Demo account info */}
+              <div className="demo-account-box">
+                <p className="demo-account-title">Demo eSewa Account</p>
+                <div className="demo-account-row">
+                  <span className="demo-account-key">eSewa ID</span>
+                  <span className="demo-account-val">9806800001</span>
+                </div>
+                <div className="demo-account-row">
+                  <span className="demo-account-key">Password</span>
+                  <span className="demo-account-val">Nepal@123</span>
+                </div>
+                <div className="demo-account-row">
+                  <span className="demo-account-key">MPIN</span>
+                  <span className="demo-account-val">1122</span>
+                </div>
+              </div>
+
+              {/* Security note */}
+              <div className="demo-security-note">
+                🔒 This is a simulated payment for demonstration purposes only.
+                No real transaction will occur.
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="demo-modal-actions">
+              <button className="demo-btn-cancel" onClick={onCancel}>
+                Cancel Payment
+              </button>
+              <button className="demo-btn-confirm" onClick={onConfirm}>
+                Confirm Payment →
+              </button>
+            </div>
+          </>
+        )}
+
+      </div>
+    </div>
+  );
+}
+// ────────────────────────────────────────────────────────────────────────────
+
 export default function Payment() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -15,9 +100,12 @@ export default function Payment() {
   const [orderId, setOrderId] = useState(existingOrderId);
   const [loading, setLoading] = useState(!existingOrderId);
   const [esewaLoading, setEsewaLoading] = useState(false);
-  const [stripeLoading, setStripeLoading] = useState(false);
   const [redirecting, setRedirecting] = useState(false);
   const [error, setError] = useState("");
+
+  // Demo modal state
+  const [showDemoModal, setShowDemoModal] = useState(false);
+  const [demoProcessing, setDemoProcessing] = useState(false);
 
   // Promo code state
   const [promoCode, setPromoCode] = useState("");
@@ -97,35 +185,7 @@ export default function Payment() {
     setPromoResult(null); setPromoCode(""); setPromoError("");
   };
 
-  // Redirect to Stripe Checkout
-  const handleStripePayment = async () => {
-    if (!orderId || redirecting) return;
-
-    setRedirecting(true);
-    setStripeLoading(true);
-    setError("");
-
-    try {
-      const token = localStorage.getItem("token") || localStorage.getItem("authToken");
-      const response = await orderAPI.createStripeSession(token, orderId);
-
-      if (!response.success || !response.url) {
-        setError("Failed to initiate Stripe payment. Please try again.");
-        setRedirecting(false);
-        setStripeLoading(false);
-        return;
-      }
-
-      // Redirect to Stripe Checkout — page navigates away
-      window.location.href = response.url;
-    } catch (err) {
-      setError(err.message || "Failed to initiate Stripe payment.");
-      setRedirecting(false);
-      setStripeLoading(false);
-    }
-  };
-
-  // Redirect to eSewa — disable button immediately to prevent double clicks
+  // Apply promo code
   const handleEsewaPayment = async () => {
     if (!orderId || redirecting) return;
 
@@ -176,27 +236,39 @@ export default function Payment() {
     }
   };
 
-  // Simulate payment — bypasses eSewa when sandbox is down (502/503)
-  const handleSimulatePayment = async () => {
+  // Simulate payment — Demo eSewa for Viva Demonstration
+  const handleSimulatePayment = () => {
     if (!orderId || redirecting) return;
-    setRedirecting(true);
-    setError("");
+    setShowDemoModal(true);
+  };
+
+  // Called when user clicks "Confirm Payment" inside the demo modal
+  const handleDemoConfirm = async () => {
+    setDemoProcessing(true);
+    // Realistic 3-second processing delay
+    await new Promise(resolve => setTimeout(resolve, 3000));
     try {
       const token = localStorage.getItem("token") || localStorage.getItem("authToken");
       const response = await orderAPI.simulatePayment(token, orderId);
-      if (response.success) {
-        localStorage.removeItem("cart");
-        window.dispatchEvent(new Event("cartUpdated"));
-        // Navigate to my-orders directly — no eSewa redirect needed
-        navigate("/my-orders");
+      if (response.success && response.encodedData) {
+        setRedirecting(true);
+        navigate(`/payment/success?data=${response.encodedData}&demo=true`);
       } else {
+        setDemoProcessing(false);
+        setShowDemoModal(false);
         setError(response.message || "Simulation failed.");
-        setRedirecting(false);
       }
     } catch (err) {
+      setDemoProcessing(false);
+      setShowDemoModal(false);
       setError(err.message || "Simulation failed.");
-      setRedirecting(false);
     }
+  };
+
+  // Called when user clicks "Cancel Payment" inside the demo modal
+  const handleDemoCancel = () => {
+    setShowDemoModal(false);
+    setDemoProcessing(false);
   };
 
   // Cancel: mark order as cancelled in DB, then go back
@@ -305,35 +377,14 @@ export default function Payment() {
                   {redirecting && esewaLoading ? "Redirecting to eSewa..." : "Pay with eSewa →"}
                 </button>
 
-                {/* Shown when eSewa sandbox is down — remove in production */}
+                {/* Shown for Demo/Viva Purposes */}
                 <button
                   className="btn-simulate-pay"
                   onClick={handleSimulatePayment}
                   disabled={redirecting || !orderId}
-                  title="Use this when eSewa sandbox is unavailable (502/503)"
+                  title="Demo eSewa Payment"
                 >
-                  🧪 Simulate Payment (eSewa down)
-                </button>
-              </div>
-            </div>
-
-            {/* Stripe / Card Payment */}
-            <div className="esewa-payment-box" style={{ marginTop: 16 }}>
-              <div className="esewa-info-side" style={{ width: "100%" }}>
-                <div className="esewa-logo-box" style={{ borderColor: "#635bff" }}>
-                  <span className="esewa-logo-text" style={{ color: "#635bff" }}>💳 Card</span>
-                </div>
-                <p className="esewa-desc">
-                  Pay securely with your credit or debit card via Stripe.
-                  You will be redirected to the Stripe checkout page.
-                </p>
-                <button
-                  className="btn-esewa-pay"
-                  onClick={handleStripePayment}
-                  disabled={stripeLoading || redirecting || !orderId}
-                  style={{ background: stripeLoading || redirecting || !orderId ? "#a5a0f5" : "#635bff" }}
-                >
-                  {stripeLoading ? "Redirecting to Stripe..." : "Pay with Card →"}
+                  🧪 Demo eSewa (For Viva Demonstration)
                 </button>
               </div>
             </div>
@@ -413,6 +464,16 @@ export default function Payment() {
         </div>
 
       </div>
+
+      {/* Demo eSewa Modal */}
+      {showDemoModal && (
+        <DemoEsewaModal
+          amount={promoResult ? promoResult.discounted_total : totalAmount}
+          onConfirm={handleDemoConfirm}
+          onCancel={handleDemoCancel}
+          processing={demoProcessing}
+        />
+      )}
     </div>
   );
 }

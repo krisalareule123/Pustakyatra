@@ -481,24 +481,24 @@ function getAuthorBooks(req, res) {
   });
 }
 
-// GET /api/authors/reviews  — all reviews for this author's books
+// GET /api/authors/reviews  — private feedback sent to this author's books
+// Only returns review_type='private' AND status='visible' (admin-approved)
 function getAuthorReviews(req, res) {
   const authorId = req.user.author_id;
   db.query(
-    `SELECT r.review_id, r.book_id, r.rating, r.comment, r.created_at,
+    `SELECT r.review_id, r.book_id, r.rating, r.comment, r.created_at, r.review_type,
             rd.full_name AS reader_name,
             b.title AS book_title
      FROM reviews r
      JOIN books b ON b.book_id = r.book_id
      LEFT JOIN readers rd ON rd.reader_id = r.reader_id
-     WHERE b.author_id = ? AND r.status = 'visible'
+     WHERE b.author_id = ? AND r.review_type = 'private' AND r.status = 'visible'
      ORDER BY r.created_at DESC
-     LIMIT 50`,
+     LIMIT 100`,
     [authorId],
     (err, rows) => {
       if (err) return res.status(500).json({ success: false, message: "Server error" });
 
-      // Calculate stats
       const totalReviews = rows.length;
       const avgRating = totalReviews > 0
         ? (rows.reduce((s, r) => s + r.rating, 0) / totalReviews).toFixed(1)

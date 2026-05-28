@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams, Link, useNavigate } from "react-router-dom";
 import { orderAPI } from "../services/api";
 import "./Payment.css";
@@ -9,21 +9,38 @@ export default function PaymentFailure() {
   const reason = searchParams.get("reason") || "failed";
 
   const orderId = searchParams.get("orderId");
-  const totalAmount = parseFloat(searchParams.get("totalAmount") || "0");
-  const itemsRaw = searchParams.get("items");
-  let items = [];
-  try {
-    items = itemsRaw ? JSON.parse(decodeURIComponent(itemsRaw)) : [];
-  } catch {
-    items = [];
-  }
+  
+  const [totalAmount, setTotalAmount] = useState(0);
+  const [items, setItems] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Mark the order as failed/cancelled in DB
+  // Fetch order details and mark the order as failed/cancelled in DB
   useEffect(() => {
-    if (!orderId) return;
+    if (!orderId) {
+      setIsLoading(false);
+      return;
+    }
     const token = localStorage.getItem("token") || localStorage.getItem("authToken");
-    if (!token) return;
+    if (!token) {
+      setIsLoading(false);
+      return;
+    }
+    
+    // Mark as failed in background
     orderAPI.failOrder(token, orderId, reason).catch(() => {});
+
+    // Fetch order details
+    orderAPI.getOrder(token, orderId)
+      .then(res => {
+        if (res.success && res.order) {
+          setTotalAmount(parseFloat(res.order.totalAmount) || 0);
+          setItems(res.order.items || []);
+        }
+      })
+      .catch(err => console.error("Failed to fetch order details:", err))
+      .finally(() => {
+        setIsLoading(false);
+      });
   }, [orderId, reason]);
 
   const handleRetry = () => {
@@ -70,14 +87,14 @@ export default function PaymentFailure() {
           </div>
         )}
 
-        {items.length > 0 && (
+        {items.length > 0 && !isLoading && (
           <div className="success-items">
             <p className="success-items-label">Items in this order:</p>
             {items.map((item, i) => (
               <div key={i} className="success-item-row">
-                <span className="success-item-title">{item.title}</span>
+                <span className="success-item-title">{item.bookTitle || item.title}</span>
                 <span className="success-item-access" style={{ color: "#6c757d" }}>
-                  {item.type === "buy" ? "Buy" : `Rent · ${item.rentDays} days`}
+                  {(item.itemType || item.type) === "buy" ? "Buy" : `Rent · ${item.rentDays} days`}
                 </span>
               </div>
             ))}

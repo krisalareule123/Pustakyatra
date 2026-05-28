@@ -19,8 +19,6 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-console.log("Stripe key loaded:", process.env.STRIPE_SECRET_KEY);
-
 // Serve uploaded cover images publicly (covers are not sensitive)
 app.use("/uploads/covers", express.static(path.join(__dirname, "../uploads/covers")));
 app.use("/uploads/avatars", express.static(path.join(__dirname, "../uploads/avatars")));

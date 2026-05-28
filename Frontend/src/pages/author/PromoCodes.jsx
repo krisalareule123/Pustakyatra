@@ -4,15 +4,7 @@ const API = "http://localhost:5001/api/authors";
 
 const OCCASIONS = [
   { value: "new_launch",    label: "New Book Launch" },
-  { value: "dashain",       label: "Dashain" },
-  { value: "tihar",         label: "Tihar" },
-  { value: "new_year",      label: "New Year" },
-  { value: "teej",          label: "Teej" },
-  { value: "first_reader",  label: "First Reader" },
-  { value: "loyalty",       label: "Loyalty Reward" },
   { value: "review_reward", label: "Review Reward" },
-  { value: "low_sales",     label: "Low Sales Boost" },
-  { value: "custom",        label: "Custom" },
 ];
 
 const STATUS_COLORS = {
@@ -165,7 +157,7 @@ export default function PromoCodes() {
 
             <div>
               <label style={labelStyle}>Code *</label>
-              <input name="code" value={form.code} onChange={handleChange} required placeholder="e.g. DASHAIN25"
+              <input name="code" value={form.code} onChange={handleChange} required placeholder="e.g. LAUNCH20"
                 disabled={!!editingId}
                 style={{ ...inputStyle, textTransform: "uppercase", background: editingId ? "#f3f4f6" : "#fff", color: editingId ? "#9ca3af" : "#1f2937" }} />
               {editingId && <p style={{ margin: "4px 0 0", fontSize: 12, color: "#9ca3af" }}>Code cannot be changed after creation</p>}

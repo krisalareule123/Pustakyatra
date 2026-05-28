@@ -3,8 +3,7 @@ const {
   createOrder, submitPayment, getOrder, getMyOrders, getLibrary,
   checkBookAccess, issueReadToken, resolveReadToken,
   initiateEsewa, verifyEsewa, failOrder, simulatePayment,
-  adminGetAllOrders, adminGetOrder,
-  createStripeSession
+  adminGetAllOrders, adminGetOrder
 } = require("../controllers/orderController");
 const authReader = require("../middleware/authReader");
 
@@ -15,7 +14,6 @@ router.post("/", authReader, createOrder);
 router.post("/submit-payment", authReader, submitPayment);
 router.post("/initiate-esewa", authReader, initiateEsewa);
 router.post("/verify-esewa", authReader, verifyEsewa);
-router.post("/stripe/create-session", authReader, createStripeSession);
 router.post("/fail", authReader, failOrder);
 router.post("/simulate-payment", authReader, simulatePayment); // DEV: bypass eSewa when sandbox is down
 router.get("/my-orders", authReader, getMyOrders);

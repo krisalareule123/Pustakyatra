@@ -54,8 +54,8 @@ export default function AuthorReviews() {
     <div className="dashboard-workspace">
       <div className="dashboard-header">
         <div>
-          <h1 className="dashboard-title">Reader Reviews</h1>
-          <div className="dashboard-date">Ratings and feedback from readers on your books</div>
+          <h1 className="dashboard-title">Reader Feedback</h1>
+          <div className="dashboard-date">Private feedback sent directly to you by readers of your books</div>
         </div>
       </div>
 
@@ -67,7 +67,7 @@ export default function AuthorReviews() {
           {avgRating > 0 && <Stars rating={avgRating} />}
         </div>
         <div className="stat-box">
-          <div className="stat-label">Total Reviews</div>
+          <div className="stat-label">Total Feedback</div>
           <div className="stat-value">{totalReviews}</div>
         </div>
         <div className="stat-box">
@@ -75,7 +75,7 @@ export default function AuthorReviews() {
           <div className="stat-value">{ratedBooks}</div>
         </div>
         <div className="stat-box">
-          <div className="stat-label">5-Star Reviews</div>
+          <div className="stat-label">5-Star Feedback</div>
           <div className="stat-value">{data.reviews.filter(r => r.rating === 5).length}</div>
         </div>
       </div>
@@ -83,9 +83,9 @@ export default function AuthorReviews() {
       {totalReviews === 0 ? (
         <div style={{ textAlign: "center", padding: "60px 20px", background: "white",
           borderRadius: 12, boxShadow: "0 1px 6px rgba(0,0,0,0.05)" }}>
-          <div style={{ fontSize: 48, marginBottom: 12 }}>⭐</div>
-          <p style={{ fontSize: 17, fontWeight: 600, color: "#1a2912", margin: "0 0 6px" }}>No reviews yet</p>
-          <p style={{ color: "#888", margin: 0 }}>Reviews from readers will appear here once your books are published.</p>
+          <div style={{ fontSize: 48, marginBottom: 12 }}>✉️</div>
+          <p style={{ fontSize: 17, fontWeight: 600, color: "#1a2912", margin: "0 0 6px" }}>No private feedback yet</p>
+          <p style={{ color: "#888", margin: 0 }}>Private feedback from readers will appear here after they purchase or rent your books.</p>
         </div>
       ) : (
         <div className="dashboard-section">

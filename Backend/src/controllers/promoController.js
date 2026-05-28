@@ -201,9 +201,25 @@ const validatePromoCode = async (req, res) => {
         return res.status(400).json({ success: false, message: "This promo code is only valid for rental orders." });
       }
     } else {
-      // all_books — must have at least one item from this author
-      // items from frontend have authorId field
-      applicableItems = items.filter(i => String(i.authorId) === String(promo.promo_author_id));
+      // all_books — must have at least one item from this author.
+      // Cart items may not carry authorId (it's not stored in localStorage),
+      // so fall back to a DB lookup by bookId when authorId is missing.
+      const bookIds = items.map(i => i.bookId).filter(Boolean);
+
+      if (bookIds.length === 0) {
+        return res.status(400).json({ success: false, message: "This promo code is not valid for the items in your cart." });
+      }
+
+      // Check if any of the cart books belong to this promo's author
+      const placeholders = bookIds.map(() => "?").join(",");
+      const authorBooks = await q(
+        `SELECT book_id FROM books WHERE book_id IN (${placeholders}) AND author_id = ?`,
+        [...bookIds, promo.promo_author_id]
+      );
+
+      const authorBookIds = new Set(authorBooks.map(b => String(b.book_id)));
+      applicableItems = items.filter(i => authorBookIds.has(String(i.bookId)));
+
       if (applicableItems.length === 0) {
         return res.status(400).json({ success: false, message: "This promo code is not valid for the items in your cart." });
       }
@@ -378,7 +394,7 @@ const checkReviewReward = async (bookId, readerId) => {
        VALUES (?, 'promo_reward', ?, ?)`,
       [
         readerId,
-        `🎁 You received promo code "${promo.code}" for writing a review! Get ${discountText} on your next purchase. Valid until ${new Date(promo.expiry_date).toLocaleDateString()}. Use it at checkout.`,
+        `🎁 You received promo code "${promo.code}" for sending private feedback to the author! Get ${discountText} on your next purchase or rental from this author's books. Valid until ${new Date(promo.expiry_date).toLocaleDateString()}. Use it at checkout.`,
         promo.promo_code_id
       ]
     );
